@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yunio 财报总览</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;
+  --blue:#2563eb;--blue-lt:#dbeafe;--green:#059669;--green-lt:#d1fae5;
+  --red:#dc2626;--red-lt:#fee2e2;--orange:#d97706;--orange-lt:#fef3c7;
+  --purple:#7c3aed;--purple-lt:#ede9fe;--r:12px;
+  --sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.page{max-width:1200px;margin:0 auto;padding:24px 20px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:22px;font-weight:700}
+.header p{color:var(--muted);font-size:13px;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:10px}
+#refreshTime{font-size:12px;color:var(--muted)}
+.btn{background:var(--blue);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:500;transition:opacity .15s}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.5;cursor:not-allowed}
+.spin{animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-bar{height:3px;background:var(--blue-lt);border-radius:2px;overflow:hidden;margin-bottom:20px;display:none}
+.loading-bar.active{display:block}
+.loading-bar::after{content:'';display:block;height:100%;width:30%;background:var(--blue);animation:slide 1.2s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(433%)}}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:24px}
+.kpi-card{background:var(--card);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh);border:1px solid var(--border)}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.kpi-value{font-size:24px;font-weight:700}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.red{color:var(--red)}.green{color:var(--green)}.blue{color:var(--blue)}.orange{color:var(--orange)}.purple{color:var(--purple)}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.bg-red{background:var(--red-lt);color:var(--red)}.bg-green{background:var(--green-lt);color:var(--green)}
+.bg-blue{background:var(--blue-lt);color:var(--blue)}.bg-orange{background:var(--orange-lt);color:var(--orange)}
+.charts-row{display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:24px}
+.card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);border:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px}
+.chart-wrap canvas{max-height:260px}
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.cmp-card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);border:1px solid var(--border)}
+.cmp-title{font-size:15px;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.stat-row{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+.stat-row:last-child{border:none}
+.stat-label{color:var(--muted)}
+.stat-value{font-weight:600;text-align:right}
+.prog{height:4px;background:var(--border);border-radius:2px;margin-top:5px;overflow:hidden;width:90px}
+.prog-fill{height:100%;border-radius:2px}
+.txn-section{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);border:1px solid var(--border)}
+.txn-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.tabs{display:flex;gap:4px;background:var(--bg);padding:3px;border-radius:8px}
+.tab{padding:5px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s}
+.tab.active{background:var(--card);color:var(--text);box-shadow:var(--sh)}
+.srch{position:relative}
+.srch input{padding:6px 10px 6px 28px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);outline:none;width:190px}
+.srch input:focus{border-color:var(--blue)}
+.srch-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #f8fafc;white-space:nowrap}
+tr:hover td{background:#f8fafc}
+tr:last-child td{border:none}
+.cat{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
+.c0{background:var(--blue-lt);color:var(--blue)}.c1{background:var(--orange-lt);color:var(--orange)}.c2{background:var(--purple-lt);color:var(--purple)}
+.txn-count{font-size:12px;color:var(--muted)}
+.msg{color:var(--muted);font-size:13px;padding:30px;text-align:center}
+.err{color:var(--red);font-size:13px;padding:20px;text-align:center}
+@media(max-width:768px){
+  .charts-row{grid-template-columns:1fr}
+  .cmp-grid{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="header">
+  <div>
+    <h1>📊 Yunio 财报总览</h1>
+    <p>数据实时同步自 Google Sheets · 2026年3月–4月</p>
+  </div>
+  <div class="header-right">
+    <span id="refreshTime">加载中…</span>
+    <button class="btn" id="btnRefresh" onclick="loadAll()">
+      <span id="refreshIcon">↻</span> 刷新数据
+    </button>
+  </div>
+</div>
+
+<div class="loading-bar" id="loadingBar"></div>
+
+<div class="kpi-grid">
+  <div class="kpi-card"><div class="kpi-label">累计总支出</div><div class="kpi-value red" id="k-exp">—</div><div class="kpi-sub">3月 + 4月合计</div></div>
+  <div class="kpi-card"><div class="kpi-label">总平台收入</div><div class="kpi-value green" id="k-rev">—</div><div class="kpi-sub" id="k-rev-sub">INR 净充提折算</div></div>
+  <div class="kpi-card"><div class="kpi-label">累计净亏损</div><div class="kpi-value red" id="k-net">—</div><div class="kpi-sub">收入 − 支出</div></div>
+  <div class="kpi-card"><div class="kpi-label">广告投放 (4月)</div><div class="kpi-value orange" id="k-ads">—</div><div class="kpi-sub" id="k-ads-sub">广告 ROI</div></div>
+  <div class="kpi-card"><div class="kpi-label">日均烧钱</div><div class="kpi-value" id="k-burn">—</div><div class="kpi-sub">已运营天数均摊</div></div>
+  <div class="kpi-card"><div class="kpi-label">人员成本占比</div><div class="kpi-value purple" id="k-hr">—</div><div class="kpi-sub">4月人员 / 总支出</div></div>
+</div>
+
+<div class="charts-row">
+  <div class="card">
+    <div class="card-title">📈 月度损益对比</div>
+    <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🥧 4月支出结构</div>
+    <div class="chart-wrap"><canvas id="chartDonut"></canvas></div>
+  </div>
+</div>
+
+<div class="cmp-grid">
+  <div class="cmp-card">
+    <div class="cmp-title"><span>3月 明细</span><span class="badge bg-blue" id="mar-badge">—</span></div>
+    <div id="mar-stats"></div>
+  </div>
+  <div class="cmp-card">
+    <div class="cmp-title"><span>4月 明细</span><span class="badge bg-red" id="apr-badge">—</span></div>
+    <div id="apr-stats"></div>
+  </div>
+</div>
+
+<div class="txn-section">
+  <div class="txn-header">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="card-title" style="margin:0">📋 全部交易明细</div>
+      <span class="txn-count" id="txn-count"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="tabs">
+        <button class="tab active" onclick="filterTab('all',this)">全部</button>
+        <button class="tab" onclick="filterTab('3月',this)">3月</button>
+        <button class="tab" onclick="filterTab('4月',this)">4月</button>
+      </div>
+      <div class="srch">
+        <span class="srch-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="搜索明细…" oninput="renderTable()">
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>日期</th><th>月份</th><th>支出类别</th><th>明细</th>
+        <th>原币</th><th style="text-align:right">原币金额</th>
+        <th style="text-align:right">美金 (USD)</th>
+        <th style="text-align:right">平台收入 (INR)</th>
+        <th style="text-align:right">当日净额</th>
+      </tr></thead>
+      <tbody id="txnBody"></tbody>
+    </table>
+    <div id="txnMsg" class="msg" style="display:none"></div>
+  </div>
+</div>
+
+</div>
+<script>
+const SID = '1HKvW-0EbJDzXVPzvk-LiKyk7JLzeBklhPegPIZJYI8A';
+const INR_RATE = 93.25;
+let allTxns = [], activeTab = 'all';
+let barChart = null, donutChart = null;
+
+async function fetchSheet(name) {
+  const url = `https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}&headers=0`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const txt = await r.text();
+  const m = txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);
+  if (!m) throw new Error('parse error');
+  const j = JSON.parse(m[1]);
+  return j.table.rows.map(row => row.c.map(c => c ? c.v : null));
+}
+
+function num(v) {
+  if (v == null || v === '') return 0;
+  if (typeof v === 'number') return v;
+  return parseFloat(String(v).replace(/[$,¥₹\s]/g,'')) || 0;
+}
+
+function usd(n, sign) {
+  const a = Math.abs(n);
+  const s = '$' + a.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
+  if (n < 0) return '-' + s;
+  if (sign && n > 0) return '+' + s;
+  return s;
+}
+
+function inr(n) {
+  if (!n) return '—';
+  const a = Math.abs(n);
+  return (n<0?'-':'+') + '₹' + a.toLocaleString('en-IN',{maximumFractionDigits:0});
+}
+
+function parseSummary(rows) {
+  const f = m => rows.find(r => r[0] && String(r[0]).includes(m));
+  const proj = f('项目支出小计'), ads = f('投放支出小计'), hr = f('人员支出小计'), rev = f('平台收入合计');
+  return {
+    proj: proj ? Math.abs(num(proj[5])) : 0,
+    ads:  ads  ? Math.abs(num(ads[5]))  : 0,
+    hr:   hr   ? Math.abs(num(hr[5]))   : 0,
+    revINR: rev ? num(rev[7]) : 0,
+    get revUSD() { return this.revINR / INR_RATE; },
+    get total() { return this.proj + this.ads + this.hr; }
+  };
+}
+
+function parseTxns(rows, month) {
+  const out = [], re = /\d+月\d+日/;
+  let ld = '';
+  for (const r of rows) {
+    const d = r[0] ? String(r[0]) : '';
+    if (re.test(d)) ld = d;
+    if (r[1] && String(r[1]).trim()) {
+      out.push({ month, date: re.test(d) ? d : ld,
+        cat: String(r[1]).trim(), detail: r[2]||'', cur: r[3]||'USD',
+        orig: num(r[4]), usd: Math.abs(num(r[5])), inrRev: num(r[7]), net: num(r[8]) });
+    }
+  }
+  return out;
+}
+
+function set(id, v) { const el = document.getElementById(id); if(el) el.textContent = v; }
+
+function renderKPIs(m, a) {
+  const totExp = m.total + a.total;
+  const totRev = m.revUSD + a.revUSD;
+  const net = totRev - totExp;
+  const roi = a.ads > 0 ? (a.revUSD / a.ads * 100).toFixed(1) : null;
+  const burn = totExp / (31 + 24);
+  const hrPct = a.total > 0 ? (a.hr / a.total * 100).toFixed(1) : '—';
+
+  set('k-exp', usd(totExp));
+  set('k-rev', usd(totRev));
+  set('k-rev-sub', '₹' + Math.round(m.revINR + a.revINR).toLocaleString() + ' ÷ ' + INR_RATE);
+  set('k-net', usd(net));
+  set('k-ads', usd(a.ads));
+  set('k-ads-sub', roi ? 'ROI ' + roi + '%  (收入/广告支出)' : '暂无收入数据');
+  set('k-burn', usd(burn) + '/天');
+  set('k-hr', hrPct + '%');
+}
+
+function renderComparison(m, a) {
+  set('mar-badge', usd(m.revUSD - m.total));
+  set('apr-badge', usd(a.revUSD - a.total));
+  function statsHTML(s) {
+    const rows = [
+      ['项目支出', usd(s.proj), '#2563eb', s.total ? s.proj/s.total : 0],
+      ['投放支出', usd(s.ads),  '#d97706', s.total ? s.ads/s.total  : 0],
+      ['人员支出', usd(s.hr),   '#7c3aed', s.total ? s.hr/s.total   : 0],
+      ['总支出',   usd(s.total), '#0f172a', 1],
+      ['平台收入', usd(s.revUSD) + ' (₹'+Math.round(s.revINR).toLocaleString()+')', '#059669', 0],
+      ['净利润',   usd(s.revUSD - s.total, true), s.revUSD-s.total<0?'#dc2626':'#059669', 0],
+    ];
+    return rows.map(([l,v,c,p]) => `
+      <div class="stat-row">
+        <span class="stat-label">${l}</span>
+        <div class="stat-value" style="color:${c}">
+          ${v}
+          ${p > 0 ? `<div class="prog"><div class="prog-fill" style="width:${Math.min(100,p*100).toFixed(0)}%;background:${c}"></div></div>` : ''}
+        </div>
+      </div>`).join('');
+  }
+  document.getElementById('mar-stats').innerHTML = statsHTML(m);
+  document.getElementById('apr-stats').innerHTML = statsHTML(a);
+}
+
+function renderCharts(m, a) {
+  // Bar chart — monthly P&L
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: ['3月', '4月'],
+      datasets: [
+        { label:'项目支出', data:[m.proj, a.proj], backgroundColor:'#93c5fd', borderRadius:4 },
+        { label:'投放支出', data:[m.ads,  a.ads],  backgroundColor:'#fcd34d', borderRadius:4 },
+        { label:'人员支出', data:[m.hr,   a.hr],   backgroundColor:'#c4b5fd', borderRadius:4 },
+        { label:'平台收入', data:[m.revUSD, a.revUSD],
+          type:'line', borderColor:'#059669', backgroundColor:'rgba(5,150,105,.15)',
+          pointBackgroundColor:'#059669', tension:.3, fill:true, borderWidth:2, yAxisID:'y' }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      scales: {
+        x: { stacked:true },
+        y: { stacked:true, ticks:{ callback: v => '$'+v.toLocaleString() } }
+      },
+      plugins: {
+        legend:{ position:'bottom', labels:{ boxWidth:12, padding:12 } },
+        tooltip:{ callbacks:{ label: ctx => ctx.dataset.label + ': ' + usd(ctx.raw) } }
+      }
+    }
+  });
+
+  // Donut chart — 4月 expense structure
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(document.getElementById('chartDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['项目支出', '投放支出', '人员支出'],
+      datasets: [{
+        data: [a.proj, a.ads, a.hr],
+        backgroundColor: ['#3b82f6','#f59e0b','#8b5cf6'],
+        borderWidth: 2, borderColor: '#fff', hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true, cutout:'62%',
+      plugins: {
+        legend:{ position:'bottom', labels:{ boxWidth:12, padding:10 } },
+        tooltip:{ callbacks:{
+          label: ctx => {
+            const pct = a.total > 0 ? (ctx.raw/a.total*100).toFixed(1) : 0;
+            return ctx.label + ': ' + usd(ctx.raw) + ' (' + pct + '%)';
+          }
+        }}
+      }
+    }
+  });
+}
+
+function filterTab(val, el) {
+  activeTab = val;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function renderTable() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  let rows = allTxns.filter(t =>
+    (activeTab === 'all' || t.month === activeTab) &&
+    (!q || t.date.includes(q) || t.cat.includes(q) || t.detail.toLowerCase().includes(q) || t.cur.toLowerCase().includes(q))
+  );
+  set('txn-count', rows.length + ' 条记录');
+  const body = document.getElementById('txnBody');
+  const msg  = document.getElementById('txnMsg');
+  if (!rows.length) { body.innerHTML = ''; msg.style.display='block'; msg.textContent='暂无匹配数据'; return; }
+  msg.style.display = 'none';
+  const catClass = { '项目支出':'c0', '投放支出':'c1', '人员支出':'c2' };
+  body.innerHTML = rows.map(t => `
+    <tr>
+      <td>${t.date}</td>
+      <td>${t.month}</td>
+      <td><span class="cat ${catClass[t.cat]||'c0'}">${t.cat}</span></td>
+      <td>${t.detail}</td>
+      <td>${t.cur}</td>
+      <td style="text-align:right">${t.orig.toLocaleString()}</td>
+      <td style="text-align:right;font-weight:600">${usd(t.usd)}</td>
+      <td style="text-align:right;color:${t.inrRev>0?'var(--green)':t.inrRev<0?'var(--red)':'var(--muted)'}">${inr(t.inrRev)}</td>
+      <td style="text-align:right;color:${t.net>0?'var(--green)':t.net<0?'var(--red)':'var(--muted)'}">
+        ${t.net !== 0 ? usd(t.net, true) : '—'}
+      </td>
+    </tr>`).join('');
+}
+
+async function loadAll() {
+  const btn = document.getElementById('btnRefresh');
+  const icon = document.getElementById('refreshIcon');
+  const bar  = document.getElementById('loadingBar');
+  btn.disabled = true; icon.className = 'spin'; icon.textContent = '↻'; bar.className = 'loading-bar active';
+  try {
+    const [marRows, aprRows] = await Promise.all([fetchSheet('3月'), fetchSheet('4月')]);
+    const mar = parseSummary(marRows);
+    const apr = parseSummary(aprRows);
+    allTxns = [...parseTxns(marRows,'3月'), ...parseTxns(aprRows,'4月')];
+    renderKPIs(mar, apr);
+    renderComparison(mar, apr);
+    renderCharts(mar, apr);
+    renderTable();
+    set('refreshTime', '更新于 ' + new Date().toLocaleTimeString('zh-CN'));
+  } catch(e) {
+    console.error(e);
+    document.getElementById('txnMsg').style.display = 'block';
+    document.getElementById('txnMsg').className = 'err';
+    document.getElementById('txnMsg').textContent = '数据加载失败：' + e.message + '（请确认表格已设为"任何人可查看"）';
+    set('refreshTime', '加载失败');
+  } finally {
+    btn.disabled = false; icon.className = ''; icon.textContent = '↻'; bar.className = 'loading-bar';
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>
