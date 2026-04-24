@@ -198,28 +198,46 @@ function inr(n) {
   return (n<0?'-':'+') + '₹' + a.toLocaleString('en-IN',{maximumFractionDigits:0});
 }
 
-function parseSummary(rows) {
-  const f = m => rows.find(r => r[0] && String(r[0]).includes(m));
-  const proj = f('项目支出小计'), ads = f('投放支出小计'), hr = f('人员支出小计'), rev = f('平台收入合计');
-  return {
-    proj: proj ? Math.abs(num(proj[5])) : 0,
-    ads:  ads  ? Math.abs(num(ads[5]))  : 0,
-    hr:   hr   ? Math.abs(num(hr[5]))   : 0,
-    revINR: rev ? num(rev[7]) : 0,
-    get revUSD() { return this.revINR / INR_RATE; },
-    get total() { return this.proj + this.ads + this.hr; }
-  };
+// Parse gviz "Date(year, month0, day)" → "N月D日"  (month is 0-indexed in gviz)
+function gvizDate(v) {
+  if (!v) return null;
+  const m = String(v).match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (m) return `${parseInt(m[2]) + 1}月${parseInt(m[3])}日`;
+  // Fallback: already formatted (e.g. "3月1日")
+  return /\d+月\d+日/.test(String(v)) ? String(v) : null;
 }
 
+function parseSummary(rows) {
+  // Subtotal rows have r[0]=null AND r[1]=null (no date, no category label)
+  // Structure (last 5): [proj_subtotal, ads_subtotal, hr_subtotal, rev_row, total_row]
+  const subs = rows.filter(r => (r[0] === null || r[0] === undefined) &&
+                                 (r[1] === null || r[1] === undefined));
+  const n = subs.length;
+  if (n < 5) return { proj:0, ads:0, hr:0, revINR:0,
+    get revUSD() { return this.revINR / INR_RATE; },
+    get total() { return this.proj + this.ads + this.hr; } };
+  // Take last 5: index n-5 … n-1
+  const proj   = Math.abs(num(subs[n-5][5]));
+  const ads    = Math.abs(num(subs[n-4][5]));
+  const hr     = Math.abs(num(subs[n-3][5]));
+  const revINR = Math.abs(num(subs[n-2][7]));
+  return { proj, ads, hr, revINR,
+    get revUSD() { return this.revINR / INR_RATE; },
+    get total() { return this.proj + this.ads + this.hr; } };
+}
+
+const KNOWN_CATS = new Set(['项目支出', '投放支出', '人员支出']);
+
 function parseTxns(rows, month) {
-  const out = [], re = /\d+月\d+日/;
+  const out = [];
   let ld = '';
   for (const r of rows) {
-    const d = r[0] ? String(r[0]) : '';
-    if (re.test(d)) ld = d;
-    if (r[1] && String(r[1]).trim()) {
-      out.push({ month, date: re.test(d) ? d : ld,
-        cat: String(r[1]).trim(), detail: r[2]||'', cur: r[3]||'USD',
+    const d = gvizDate(r[0]);
+    if (d) ld = d;
+    const cat = r[1] ? String(r[1]).trim() : '';
+    if (KNOWN_CATS.has(cat)) {
+      out.push({ month, date: ld,
+        cat, detail: r[2]||'', cur: r[3]||'USD',
         orig: num(r[4]), usd: Math.abs(num(r[5])), inrRev: num(r[7]), net: num(r[8]) });
     }
   }
