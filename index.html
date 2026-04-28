@@ -601,7 +601,8 @@ async function loadAll() {
   const bar  = document.getElementById('loadingBar');
   btn.disabled = true; icon.className = 'spin'; icon.textContent = '↻'; bar.className = 'loading-bar active';
   try {
-    const [marRows, aprRows, mayRows] = await Promise.all([fetchSheet('3月'), fetchSheet('4月'), fetchSheet('5月')]);
+    const safeSheet = async n => { try { return await fetchSheet(n); } catch { return []; } };
+    const [marRows, aprRows, mayRows] = await Promise.all([safeSheet('3月'), safeSheet('4月'), safeSheet('5月')]);
     lastMar = parseSummary(marRows);
     lastApr = parseSummary(aprRows);
     lastMay = parseSummary(mayRows);
