@@ -49,7 +49,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue'
 .card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);border:1px solid var(--border)}
 .card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px}
 .chart-wrap canvas{max-height:260px}
-.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.cmp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:24px}
 .cmp-card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);border:1px solid var(--border)}
 .cmp-title{font-size:15px;font-weight:700;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .stat-row{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
@@ -91,7 +91,7 @@ tr:last-child td{border:none}
 <div class="header">
   <div>
     <h1 id="header-h1">📊 财报总览</h1>
-    <p id="header-subtitle">数据实时同步自 Google Sheets · 2026年3月–4月</p>
+    <p id="header-subtitle">数据实时同步自 Google Sheets · 2026年3月–5月</p>
   </div>
   <div class="header-right">
     <span id="refreshTime">加载中…</span>
@@ -108,7 +108,7 @@ tr:last-child td{border:none}
   <div class="kpi-card">
     <div class="kpi-label" id="kpi-label-exp">累计总支出</div>
     <div class="kpi-value red" id="k-exp">—</div>
-    <div class="kpi-sub" id="kpi-sub-exp">3月 + 4月合计</div>
+    <div class="kpi-sub" id="kpi-sub-exp">3月 + 4月 + 5月合计</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label" id="kpi-label-rev">总平台收入</div>
@@ -121,7 +121,7 @@ tr:last-child td{border:none}
     <div class="kpi-sub" id="kpi-sub-net">收入 − 支出</div>
   </div>
   <div class="kpi-card">
-    <div class="kpi-label" id="kpi-label-ads">广告投放 (4月)</div>
+    <div class="kpi-label" id="kpi-label-ads">广告投放 (最新月)</div>
     <div class="kpi-value orange" id="k-ads">—</div>
     <div class="kpi-sub" id="k-ads-sub">广告 ROI</div>
   </div>
@@ -133,7 +133,7 @@ tr:last-child td{border:none}
   <div class="kpi-card">
     <div class="kpi-label" id="kpi-label-hr">人员成本占比</div>
     <div class="kpi-value purple" id="k-hr">—</div>
-    <div class="kpi-sub" id="kpi-sub-hr">4月人员 / 总支出</div>
+    <div class="kpi-sub" id="kpi-sub-hr">最新月人员 / 总支出</div>
   </div>
 </div>
 
@@ -143,7 +143,7 @@ tr:last-child td{border:none}
     <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
   </div>
   <div class="card">
-    <div class="card-title" id="chart-donut-title">🥧 4月支出结构</div>
+    <div class="card-title" id="chart-donut-title">🥧 最新月支出结构</div>
     <div class="chart-wrap"><canvas id="chartDonut"></canvas></div>
   </div>
 </div>
@@ -163,6 +163,13 @@ tr:last-child td{border:none}
     </div>
     <div id="apr-stats"></div>
   </div>
+  <div class="cmp-card">
+    <div class="cmp-title">
+      <span id="may-title">5月 明细</span>
+      <span class="badge bg-blue" id="may-badge">—</span>
+    </div>
+    <div id="may-stats"></div>
+  </div>
 </div>
 
 <div class="txn-section">
@@ -176,6 +183,7 @@ tr:last-child td{border:none}
         <button class="tab active" id="tab-all" onclick="filterTab('all',this)">全部</button>
         <button class="tab" id="tab-mar" onclick="filterTab('3月',this)">3月</button>
         <button class="tab" id="tab-apr" onclick="filterTab('4月',this)">4月</button>
+        <button class="tab" id="tab-may" onclick="filterTab('5月',this)">5月</button>
       </div>
       <div class="srch">
         <span class="srch-icon">🔍</span>
@@ -208,7 +216,7 @@ const SID = '1HKvW-0EbJDzXVPzvk-LiKyk7JLzeBklhPegPIZJYI8A';
 const INR_RATE = 93.25;
 let allTxns = [], activeTab = 'all';
 let barChart = null, donutChart = null;
-let lastMar = null, lastApr = null;
+let lastMar = null, lastApr = null, lastMay = null;
 let currentLang = 'zh';
 
 // ── Translations ─────────────────────────────────────────────────────────────
@@ -217,38 +225,39 @@ const T = {
     htmlLang: 'zh-CN',
     pageTitle: '财报总览',
     h1: '📊 财报总览',
-    subtitle: '数据实时同步自 Google Sheets · 2026年3月–4月',
+    subtitle: '数据实时同步自 Google Sheets · 2026年3月–5月',
     refreshBtn: '刷新数据',
     langToggle: 'EN',
     loadingText: '加载中…',
     loadFailed: '加载失败',
-    kpiExp: '累计总支出', kpiExpSub: '3月 + 4月合计',
+    kpiExp: '累计总支出', kpiExpSub: '3月 + 4月 + 5月合计',
     kpiRev: '总平台收入',
     kpiNet: '累计净亏损', kpiNetSub: '收入 − 支出',
-    kpiAds: '广告投放 (4月)',
+    kpiAds: '广告投放 (最新月)',
     kpiBurn: '日均烧钱', kpiBurnSub: '已运营天数均摊',
-    kpiHR: '人员成本占比', kpiHRSub: '4月人员 / 总支出',
+    kpiHR: '人员成本占比', kpiHRSub: '最新月人员 / 总支出',
     roiSub: (r) => `ROI ${r}%  (收入/广告支出)`,
     roiNoData: '暂无收入数据',
     revSub: (inr) => `₹${inr} ÷ ${INR_RATE}`,
     burnSuffix: '/天',
     updatedAt: (t) => `更新于 ${t}`,
     chartBarTitle: '📈 月度损益对比',
-    chartDonutTitle: '🥧 4月支出结构',
+    chartDonutTitle: '🥧 最新月支出结构',
     marTitle: '3月 明细',
     aprTitle: '4月 明细',
+    mayTitle: '5月 明细',
     statsLabels: ['项目支出','投放支出','人员支出','总支出','平台收入','净利润'],
     txnTitle: '📋 全部交易明细',
     records: '条记录',
-    tabAll: '全部', tabMar: '3月', tabApr: '4月',
+    tabAll: '全部', tabMar: '3月', tabApr: '4月', tabMay: '5月',
     searchPH: '搜索明细…',
     thDate:'日期', thMonth:'月份', thCat:'支出类别', thDetail:'明细',
     thCur:'原币', thOrig:'原币金额', thUSD:'美金 (USD)',
     thINR:'平台收入 (INR)', thNet:'当日净额',
     catMap: { '项目支出':'项目支出', '投放支出':'投放支出', '人员支出':'人员支出' },
-    monthMap: { '3月':'3月', '4月':'4月' },
+    monthMap: { '3月':'3月', '4月':'4月', '5月':'5月' },
     dsLabels: ['项目支出','投放支出','人员支出','平台收入'],
-    chartMonths: ['3月','4月'],
+    chartMonths: ['3月','4月','5月'],
     noData: '暂无匹配数据',
     errPrefix: '数据加载失败：',
     errSuffix: '（请确认表格已设为"任何人可查看"）',
@@ -257,38 +266,39 @@ const T = {
     htmlLang: 'en',
     pageTitle: 'Financial Report',
     h1: '📊 Financial Report',
-    subtitle: 'Real-time sync from Google Sheets · Mar–Apr 2026',
+    subtitle: 'Real-time sync from Google Sheets · Mar–May 2026',
     refreshBtn: 'Refresh',
     langToggle: '中文',
     loadingText: 'Loading…',
     loadFailed: 'Load failed',
-    kpiExp: 'Total Expenses', kpiExpSub: 'Mar + Apr combined',
+    kpiExp: 'Total Expenses', kpiExpSub: 'Mar + Apr + May combined',
     kpiRev: 'Platform Revenue',
     kpiNet: 'Net Loss', kpiNetSub: 'Revenue − Expenses',
-    kpiAds: 'Ad Spend (Apr)',
+    kpiAds: 'Ad Spend (Latest)',
     kpiBurn: 'Daily Burn', kpiBurnSub: 'Avg. over operating days',
-    kpiHR: 'Headcount %', kpiHRSub: 'Apr headcount / total expenses',
+    kpiHR: 'Headcount %', kpiHRSub: 'Latest month headcount / total expenses',
     roiSub: (r) => `ROI ${r}%  (Revenue / Ad Spend)`,
     roiNoData: 'No revenue data yet',
     revSub: (inr) => `₹${inr} ÷ ${INR_RATE}`,
     burnSuffix: '/day',
     updatedAt: (t) => `Updated at ${t}`,
     chartBarTitle: '📈 Monthly P&L Comparison',
-    chartDonutTitle: '🥧 Apr Expense Structure',
+    chartDonutTitle: '🥧 Latest Month Expenses',
     marTitle: 'March Detail',
     aprTitle: 'April Detail',
+    mayTitle: 'May Detail',
     statsLabels: ['Project','Ad Spend','Headcount','Total Expenses','Platform Revenue','Net Profit'],
     txnTitle: '📋 All Transactions',
     records: 'records',
-    tabAll: 'All', tabMar: 'Mar', tabApr: 'Apr',
+    tabAll: 'All', tabMar: 'Mar', tabApr: 'Apr', tabMay: 'May',
     searchPH: 'Search…',
     thDate:'Date', thMonth:'Month', thCat:'Category', thDetail:'Detail',
     thCur:'Currency', thOrig:'Orig. Amount', thUSD:'USD',
     thINR:'Platform Rev (INR)', thNet:'Daily Net',
     catMap: { '项目支出':'Project', '投放支出':'Ad Spend', '人员支出':'Headcount' },
-    monthMap: { '3月':'Mar', '4月':'Apr' },
+    monthMap: { '3月':'Mar', '4月':'Apr', '5月':'May' },
     dsLabels: ['Project','Ad Spend','Headcount','Platform Rev.'],
-    chartMonths: ['Mar','Apr'],
+    chartMonths: ['Mar','Apr','May'],
     noData: 'No matching data',
     errPrefix: 'Failed to load: ',
     errSuffix: ' (Ensure the sheet is set to "Anyone can view")',
@@ -324,10 +334,12 @@ function applyLang() {
   document.getElementById('chart-donut-title').textContent = l.chartDonutTitle;
   document.getElementById('mar-title').textContent = l.marTitle;
   document.getElementById('apr-title').textContent = l.aprTitle;
+  document.getElementById('may-title').textContent = l.mayTitle;
   document.getElementById('txn-title').textContent = l.txnTitle;
   document.getElementById('tab-all').textContent = l.tabAll;
   document.getElementById('tab-mar').textContent = l.tabMar;
   document.getElementById('tab-apr').textContent = l.tabApr;
+  document.getElementById('tab-may').textContent = l.tabMay;
   document.getElementById('searchInput').placeholder = l.searchPH;
   document.getElementById('th-date').textContent = l.thDate;
   document.getElementById('th-month').textContent = l.thMonth;
@@ -340,11 +352,11 @@ function applyLang() {
   document.getElementById('th-net').textContent = l.thNet;
   // Re-render dynamic sections if data is loaded
   if (lastMar && lastApr) {
-    renderKPIs(lastMar, lastApr);
-    renderComparison(lastMar, lastApr);
-    renderCharts(lastMar, lastApr);
+    renderKPIs(lastMar, lastApr, lastMay);
+    renderComparison(lastMar, lastApr, lastMay);
+    renderCharts(lastMar, lastApr, lastMay);
     renderTable();
-    updateFaviconAndTitle(lastMar, lastApr);
+    updateFaviconAndTitle(lastMar, lastApr, lastMay);
   }
 }
 
@@ -424,30 +436,35 @@ function parseTxns(rows, month) {
 function set(id, v) { const el = document.getElementById(id); if(el) el.textContent = v; }
 
 // ── Render functions ──────────────────────────────────────────────────────────
-function renderKPIs(m, a) {
+function renderKPIs(m, a, may) {
   const l = t();
-  const totExp = m.total + a.total;
-  const totRev = m.revUSD + a.revUSD;
+  may = may || { proj:0, ads:0, hr:0, revINR:0, get revUSD(){return 0;}, get total(){return 0;} };
+  const latest = may.total > 0 ? may : a;
+  const totExp = m.total + a.total + may.total;
+  const totRev = m.revUSD + a.revUSD + may.revUSD;
   const net = totRev - totExp;
-  const roi = a.ads > 0 ? (a.revUSD / a.ads * 100).toFixed(1) : null;
-  const burn = totExp / (31 + 24);
-  const hrPct = a.total > 0 ? (a.hr / a.total * 100).toFixed(1) : '—';
-  const inrTotal = Math.round(m.revINR + a.revINR).toLocaleString();
+  const roi = latest.ads > 0 ? (latest.revUSD / latest.ads * 100).toFixed(1) : null;
+  const opDays = 31 + 30 + (may.total > 0 ? new Date().getDate() : 0) || 61;
+  const burn = totExp / opDays;
+  const hrPct = latest.total > 0 ? (latest.hr / latest.total * 100).toFixed(1) : '—';
+  const inrTotal = Math.round(m.revINR + a.revINR + may.revINR).toLocaleString();
 
   set('k-exp', usd(totExp));
   set('k-rev', usd(totRev));
   set('k-rev-sub', l.revSub(inrTotal));
   set('k-net', usd(net));
-  set('k-ads', usd(a.ads));
+  set('k-ads', usd(latest.ads));
   set('k-ads-sub', roi ? l.roiSub(roi) : l.roiNoData);
   set('k-burn', usd(burn) + l.burnSuffix);
   set('k-hr', hrPct + '%');
 }
 
-function renderComparison(m, a) {
+function renderComparison(m, a, may) {
   const l = t();
+  may = may || { proj:0, ads:0, hr:0, revINR:0, get revUSD(){return 0;}, get total(){return 0;} };
   set('mar-badge', usd(m.revUSD - m.total));
   set('apr-badge', usd(a.revUSD - a.total));
+  set('may-badge', usd(may.revUSD - may.total));
 
   function statsHTML(s) {
     const rows = [
@@ -469,20 +486,23 @@ function renderComparison(m, a) {
   }
   document.getElementById('mar-stats').innerHTML = statsHTML(m);
   document.getElementById('apr-stats').innerHTML = statsHTML(a);
+  document.getElementById('may-stats').innerHTML = statsHTML(may);
 }
 
-function renderCharts(m, a) {
+function renderCharts(m, a, may) {
   const l = t();
+  may = may || { proj:0, ads:0, hr:0, revINR:0, get revUSD(){return 0;}, get total(){return 0;} };
+  const latest = may.total > 0 ? may : a;
   if (barChart) barChart.destroy();
   barChart = new Chart(document.getElementById('chartBar'), {
     type: 'bar',
     data: {
       labels: l.chartMonths,
       datasets: [
-        { label: l.dsLabels[0], data:[m.proj, a.proj], backgroundColor:'#93c5fd', borderRadius:4 },
-        { label: l.dsLabels[1], data:[m.ads,  a.ads],  backgroundColor:'#fcd34d', borderRadius:4 },
-        { label: l.dsLabels[2], data:[m.hr,   a.hr],   backgroundColor:'#c4b5fd', borderRadius:4 },
-        { label: l.dsLabels[3], data:[m.revUSD, a.revUSD],
+        { label: l.dsLabels[0], data:[m.proj, a.proj, may.proj], backgroundColor:'#93c5fd', borderRadius:4 },
+        { label: l.dsLabels[1], data:[m.ads,  a.ads,  may.ads],  backgroundColor:'#fcd34d', borderRadius:4 },
+        { label: l.dsLabels[2], data:[m.hr,   a.hr,   may.hr],   backgroundColor:'#c4b5fd', borderRadius:4 },
+        { label: l.dsLabels[3], data:[m.revUSD, a.revUSD, may.revUSD],
           type:'line', borderColor:'#059669', backgroundColor:'rgba(5,150,105,.15)',
           pointBackgroundColor:'#059669', tension:.3, fill:true, borderWidth:2, yAxisID:'y' }
       ]
@@ -506,7 +526,7 @@ function renderCharts(m, a) {
     data: {
       labels: [l.dsLabels[0], l.dsLabels[1], l.dsLabels[2]],
       datasets: [{
-        data: [a.proj, a.ads, a.hr],
+        data: [latest.proj, latest.ads, latest.hr],
         backgroundColor: ['#3b82f6','#f59e0b','#8b5cf6'],
         borderWidth: 2, borderColor: '#fff', hoverOffset: 6
       }]
@@ -517,7 +537,7 @@ function renderCharts(m, a) {
         legend:{ position:'bottom', labels:{ boxWidth:12, padding:10 } },
         tooltip:{ callbacks:{
           label: ctx => {
-            const pct = a.total > 0 ? (ctx.raw/a.total*100).toFixed(1) : 0;
+            const pct = latest.total > 0 ? (ctx.raw/latest.total*100).toFixed(1) : 0;
             return ctx.label + ': ' + usd(ctx.raw) + ' (' + pct + '%)';
           }
         }}
@@ -574,15 +594,16 @@ async function loadAll() {
   const bar  = document.getElementById('loadingBar');
   btn.disabled = true; icon.className = 'spin'; icon.textContent = '↻'; bar.className = 'loading-bar active';
   try {
-    const [marRows, aprRows] = await Promise.all([fetchSheet('3月'), fetchSheet('4月')]);
+    const [marRows, aprRows, mayRows] = await Promise.all([fetchSheet('3月'), fetchSheet('4月'), fetchSheet('5月')]);
     lastMar = parseSummary(marRows);
     lastApr = parseSummary(aprRows);
-    allTxns = [...parseTxns(marRows,'3月'), ...parseTxns(aprRows,'4月')];
-    renderKPIs(lastMar, lastApr);
-    renderComparison(lastMar, lastApr);
-    renderCharts(lastMar, lastApr);
+    lastMay = parseSummary(mayRows);
+    allTxns = [...parseTxns(marRows,'3月'), ...parseTxns(aprRows,'4月'), ...parseTxns(mayRows,'5月')];
+    renderKPIs(lastMar, lastApr, lastMay);
+    renderComparison(lastMar, lastApr, lastMay);
+    renderCharts(lastMar, lastApr, lastMay);
     renderTable();
-    updateFaviconAndTitle(lastMar, lastApr);
+    updateFaviconAndTitle(lastMar, lastApr, lastMay);
     set('refreshTime', t().updatedAt(new Date().toLocaleTimeString(currentLang==='zh'?'zh-CN':'en-US')));
   } catch(e) {
     console.error(e);
@@ -619,10 +640,12 @@ function generateFavicon(isProfit) {
   return c.toDataURL();
 }
 
-function updateFaviconAndTitle(m, a) {
+function updateFaviconAndTitle(m, a, may) {
   const l = t();
-  const totExp = m.total + a.total;
-  const totRev = m.revUSD + a.revUSD;
+  may = may || { proj:0, ads:0, hr:0, revINR:0, get revUSD(){return 0;}, get total(){return 0;} };
+  const latest = may.total > 0 ? may : a;
+  const totExp = m.total + a.total + may.total;
+  const totRev = m.revUSD + a.revUSD + may.revUSD;
   const isProfit = totRev >= totExp;
   // Favicon
   const link = document.getElementById('dynamic-favicon');
