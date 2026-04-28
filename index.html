@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title id="page-title">财报总览</title>
+<link rel="icon" id="dynamic-favicon" type="image/png" href="">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -339,6 +340,7 @@ function applyLang() {
     renderComparison(lastMar, lastApr);
     renderCharts(lastMar, lastApr);
     renderTable();
+    updateFaviconAndTitle(lastMar, lastApr);
   }
 }
 
@@ -576,6 +578,7 @@ async function loadAll() {
     renderComparison(lastMar, lastApr);
     renderCharts(lastMar, lastApr);
     renderTable();
+    updateFaviconAndTitle(lastMar, lastApr);
     set('refreshTime', t().updatedAt(new Date().toLocaleTimeString(currentLang==='zh'?'zh-CN':'en-US')));
   } catch(e) {
     console.error(e);
@@ -585,6 +588,54 @@ async function loadAll() {
     set('refreshTime', t().loadFailed);
   } finally {
     btn.disabled = false; icon.className = ''; icon.textContent = '↻'; bar.className = 'loading-bar';
+  }
+}
+
+// ── Dynamic favicon + browser-tab title ──────────────────────────────────────
+function generateFavicon(isProfit) {
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 32;
+  const ctx = c.getContext('2d');
+  // Rounded-rect background
+  ctx.beginPath();
+  ctx.moveTo(7,0); ctx.lineTo(25,0);
+  ctx.quadraticCurveTo(32,0,32,7); ctx.lineTo(32,25);
+  ctx.quadraticCurveTo(32,32,25,32); ctx.lineTo(7,32);
+  ctx.quadraticCurveTo(0,32,0,25); ctx.lineTo(0,7);
+  ctx.quadraticCurveTo(0,0,7,0); ctx.closePath();
+  ctx.fillStyle = '#1d4ed8'; ctx.fill();
+  // Three bars (ascending)
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(4,23,6,6);
+  ctx.fillStyle = 'rgba(255,255,255,0.60)'; ctx.fillRect(13,16,6,13);
+  ctx.fillStyle = 'rgba(255,255,255,0.90)'; ctx.fillRect(22,9,6,20);
+  // Trend line — green if profitable, red if loss
+  ctx.strokeStyle = isProfit ? '#34d399' : '#f87171';
+  ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(7,22); ctx.lineTo(16,13); ctx.lineTo(25,5); ctx.stroke();
+  return c.toDataURL();
+}
+
+function updateFaviconAndTitle(m, a) {
+  const l = t();
+  const totExp = m.total + a.total;
+  const totRev = m.revUSD + a.revUSD;
+  const isProfit = totRev >= totExp;
+  // Favicon
+  const link = document.getElementById('dynamic-favicon');
+  if (link) link.href = generateFavicon(isProfit);
+  // Browser-tab title: show current month (Apr) expenses + revenue
+  const aprExpStr = '
+</body>
+</html>
+ + Math.round(a.total).toLocaleString('en-US');
+  const aprRevStr = '
+</body>
+</html>
+ + Math.round(a.revUSD).toLocaleString('en-US');
+  if (currentLang === 'zh') {
+    document.title = `财报总览 · 4月支出 ${aprExpStr} · 收入 ${aprRevStr}`;
+  } else {
+    document.title = `Finance · Apr Exp ${aprExpStr} · Rev ${aprRevStr}`;
   }
 }
 
