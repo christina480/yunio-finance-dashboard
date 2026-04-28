@@ -400,18 +400,25 @@ function gvizDate(v) {
 }
 
 function parseSummary(rows) {
+  // Sheet summary structure (last 6 rows, col A & col B both null):
+  //   n-6: project cost  (col F)
+  //   n-5: ad spend      (col F)
+  //   n-4: personnel     (col F)
+  //   n-3: revenue USD   (col F)
+  //   n-2: total expense (col F)
+  //   n-1: net P&L       (col F)
   const subs = rows.filter(r => (r[0] === null || r[0] === undefined) &&
                                  (r[1] === null || r[1] === undefined));
   const n = subs.length;
-  if (n < 5) return { proj:0, ads:0, hr:0, revINR:0,
-    get revUSD() { return this.revINR / INR_RATE; },
+  const empty = { proj:0, ads:0, hr:0, revUSD:0, revINR:0,
     get total() { return this.proj + this.ads + this.hr; } };
-  const proj   = Math.abs(num(subs[n-5][5]));
-  const ads    = Math.abs(num(subs[n-4][5]));
-  const hr     = Math.abs(num(subs[n-3][5]));
-  const revINR = Math.abs(num(subs[n-2][7]));
-  return { proj, ads, hr, revINR,
-    get revUSD() { return this.revINR / INR_RATE; },
+  if (n < 6) return empty;
+  const proj   = Math.abs(num(subs[n-6][5]));
+  const ads    = Math.abs(num(subs[n-5][5]));
+  const hr     = Math.abs(num(subs[n-4][5]));
+  const revUSD = Math.abs(num(subs[n-3][5]));
+  const revINR = revUSD * INR_RATE;
+  return { proj, ads, hr, revUSD, revINR,
     get total() { return this.proj + this.ads + this.hr; } };
 }
 
@@ -438,7 +445,7 @@ function set(id, v) { const el = document.getElementById(id); if(el) el.textCont
 // ── Render functions ──────────────────────────────────────────────────────────
 function renderKPIs(m, a, may) {
   const l = t();
-  may = may || { proj:0, ads:0, hr:0, revINR:0, get revUSD(){return 0;}, get total(){return 0;} };
+  may = may || { proj:0, ads:0, hr:0, revUSD:0, revINR:0, get total(){return 0;} };
   const latest = may.total > 0 ? may : a;
   const totExp = m.total + a.total + may.total;
   const totRev = m.revUSD + a.revUSD + may.revUSD;
@@ -461,7 +468,7 @@ function renderKPIs(m, a, may) {
 
 function renderComparison(m, a, may) {
   const l = t();
-  may = may || { proj:0, ads:0, hr:0, revINR:0, get revUSD(){return 0;}, get total(){return 0;} };
+  may = may || { proj:0, ads:0, hr:0, revUSD:0, revINR:0, get total(){return 0;} };
   set('mar-badge', usd(m.revUSD - m.total));
   set('apr-badge', usd(a.revUSD - a.total));
   set('may-badge', usd(may.revUSD - may.total));
@@ -491,7 +498,7 @@ function renderComparison(m, a, may) {
 
 function renderCharts(m, a, may) {
   const l = t();
-  may = may || { proj:0, ads:0, hr:0, revINR:0, get revUSD(){return 0;}, get total(){return 0;} };
+  may = may || { proj:0, ads:0, hr:0, revUSD:0, revINR:0, get total(){return 0;} };
   const latest = may.total > 0 ? may : a;
   if (barChart) barChart.destroy();
   barChart = new Chart(document.getElementById('chartBar'), {
@@ -642,7 +649,7 @@ function generateFavicon(isProfit) {
 
 function updateFaviconAndTitle(m, a, may) {
   const l = t();
-  may = may || { proj:0, ads:0, hr:0, revINR:0, get revUSD(){return 0;}, get total(){return 0;} };
+  may = may || { proj:0, ads:0, hr:0, revUSD:0, revINR:0, get total(){return 0;} };
   const latest = may.total > 0 ? may : a;
   const totExp = m.total + a.total + may.total;
   const totRev = m.revUSD + a.revUSD + may.revUSD;
