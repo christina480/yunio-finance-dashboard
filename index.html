@@ -111,6 +111,11 @@ tr:last-child td{border:none}
 
 <!-- Cumulative KPI cards -->
 <div class="kpi-grid">
+  <div class="kpi-card month-card-current">
+    <div class="kpi-label" id="kpi-label-curnet">当月净亏损 <span class="badge-current" style="font-size:10px">当月</span></div>
+    <div class="kpi-value red" id="k-curnet">—</div>
+    <div class="kpi-sub" id="kpi-sub-curnet">最新月份收入 − 支出</div>
+  </div>
   <div class="kpi-card">
     <div class="kpi-label" id="kpi-label-exp">累计总支出</div>
     <div class="kpi-value red" id="k-exp">—</div>
@@ -215,6 +220,7 @@ const T = {
     subtitle: m => `数据实时同步自 Google Sheets · ${m}`,
     refreshBtn:'刷新数据', langToggle:'EN',
     loadingText:'加载中…', loadFailed:'加载失败',
+    kpiCurNet:'当月净亏损', kpiCurNetSub:'最新月份收入 − 支出',
     kpiExp:'累计总支出', kpiExpSub:'所有月份合计',
     kpiRev:'总平台收入', kpiRevSub:'所有月份合计',
     kpiNet:'累计净亏损', kpiNetSub:'收入 − 支出',
@@ -246,6 +252,7 @@ const T = {
     subtitle: m => `Real-time sync from Google Sheets · ${m}`,
     refreshBtn:'Refresh', langToggle:'中文',
     loadingText:'Loading…', loadFailed:'Load failed',
+    kpiCurNet:'Current Month Net', kpiCurNetSub:'Latest month revenue − expenses',
     kpiExp:'Total Expenses', kpiExpSub:'All months combined',
     kpiRev:'Platform Revenue', kpiRevSub:'All months combined',
     kpiNet:'Net Loss', kpiNetSub:'Revenue − Expenses',
@@ -447,6 +454,11 @@ function renderKPIs() {
   const burn = totExp / opDays;
   const hrPct = latest.total > 0 ? (latest.hr / latest.total * 100).toFixed(1) : '—';
 
+  const curNet = latest.revUSD - latest.total;
+
+  set('k-curnet', usd(curNet));
+  document.getElementById('kpi-sub-curnet').textContent = t.kpiCurNetSub;
+  document.getElementById('kpi-label-curnet').innerHTML = t.kpiCurNet + ` <span class="badge-current" style="font-size:10px">${currentLang==='zh'?'当月':'Current'}</span>`;
   set('k-exp', usd(totExp));
   set('k-rev', usd(totRev));
   set('k-net', usd(net));
