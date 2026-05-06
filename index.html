@@ -386,22 +386,27 @@ function parseSummary(rows, name) {
     if (total > 0 || Math.abs(net) > 0) return { name, proj, ads, hr, revUSD, total, net };
   }
   // --- Approach 2: Simplified format (5月-style) ---
-  // Rev/total/net are text strings in col B (index 1); cost breakdowns in col D (index 3)
+  // All null-A rows with any non-null/non-empty value in col B (include zero values)
   const nullARows = rows.filter(r => r[0] === null || r[0] === undefined);
-  // Summary rows: null A, non-zero numeric value in col B
-  const bRows = nullARows.filter(r => r[1] !== null && r[1] !== undefined && r[1] !== '' && num(r[1]) !== 0);
-  // Cost rows: null A, null B, non-zero value in col D
-  const dRows = nullARows.filter(r =>
-    (r[1] === null || r[1] === undefined || r[1] === '') &&
-    r[3] !== null && r[3] !== undefined && r[3] !== '' && num(r[3]) !== 0);
-  if (bRows.length >= 3) {
-    const revUSD = Math.abs(num(bRows[bRows.length-3][1]));
-    const total  = Math.abs(num(bRows[bRows.length-2][1]));
-    const net    = num(bRows[bRows.length-1][1]);
-    const proj   = dRows.length >= 1 ? Math.abs(num(dRows[0][3])) : 0;
-    const ads    = dRows.length >= 2 ? Math.abs(num(dRows[1][3])) : 0;
-    const hr     = dRows.length >= 3 ? Math.abs(num(dRows[2][3])) : 0;
-    if (total > 0 || Math.abs(net) > 0) return { name, proj, ads, hr, revUSD, total, net };
+  const bValRows = nullARows.filter(r => r[1] !== null && r[1] !== undefined && r[1] !== '');
+  if (bValRows.length >= 3) {
+    const revUSD = Math.abs(num(bValRows[bValRows.length-3][1]));
+    const total  = Math.abs(num(bValRows[bValRows.length-2][1]));
+    const net    = num(bValRows[bValRows.length-1][1]);
+    if (total > 0 || Math.abs(net) > 0) {
+      // Cost breakdowns: try B-column first (numeric format), fall back to D-column (text format)
+      const costBRows = bValRows.slice(0, -3).filter(r => num(r[1]) > 0);
+      const costDRows = nullARows.filter(r =>
+        (r[1] === null || r[1] === undefined || r[1] === '') &&
+        r[3] !== null && r[3] !== undefined && r[3] !== '' && num(r[3]) !== 0);
+      const useBCol = costBRows.length > 0;
+      const costRows = useBCol ? costBRows : costDRows;
+      const getVal = r => useBCol ? Math.abs(num(r[1])) : Math.abs(num(r[3]));
+      const proj = costRows.length >= 1 ? getVal(costRows[0]) : 0;
+      const ads  = costRows.length >= 2 ? getVal(costRows[1]) : 0;
+      const hr   = costRows.length >= 3 ? getVal(costRows[2]) : 0;
+      return { name, proj, ads, hr, revUSD, total, net };
+    }
   }
   return null;
 }
