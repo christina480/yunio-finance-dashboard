@@ -696,18 +696,13 @@ async function loadAll() {
     // Load per-month transaction data; use overview summary when available
     const results = await Promise.all(ALL_MONTHS.map(async name => {
       const rows = await safeSheet(name);
-      // Use overview summary as primary source; fallback to sheet parsing
+      // Use overview (财报总览) as the authoritative source for all monthly summaries.
+      // The overview uses the correct INR/USD rate (÷93.25) and verified totals.
+      // Only fall back to sheet parsing if a month is missing from the overview.
       let summary = overviewSummaries[name] || null;
       if (!summary) {
         if (!rows) return null;
         summary = parseSummary(rows, name);
-      } else if (rows) {
-        // Merge: use sheet's expense calculation (includes all rows) + correct INR revenue
-        const sheetSummary = parseSummary(rows, name);
-        if (sheetSummary && sheetSummary.total > 0) {
-          const revUSD = summary.revUSD || computeINRRevUSD(rows);
-          summary = { ...sheetSummary, revUSD, net: revUSD - sheetSummary.total };
-        }
       }
       if (!summary) return null;
       // Skip months with no data at all
