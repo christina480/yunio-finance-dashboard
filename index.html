@@ -430,9 +430,13 @@ async function loadOverviewSummaries() {
     const a = r[0] != null ? String(r[0]).trim() : '';
     const b = r[1];
     const mSum = a.match(/▌\s*(\d+月)\s*汇总/);
-    if (mSum) { currentMonth = mSum[1]; inDetail = false; if (!summaries[currentMonth]) summaries[currentMonth] = { name: currentMonth, proj:0, ads:0, hr:0, revUSD:0, total:0, net:0 }; continue; }
     const mDet = a.match(/▌\s*(\d+月)\s*支出分类明细/);
-    if (mDet) { currentMonth = mDet[1]; inDetail = true; continue; }
+    if (a.includes('▌')) {
+      if (mSum) { currentMonth = mSum[1]; inDetail = false; if (!summaries[currentMonth]) summaries[currentMonth] = { name: currentMonth, proj:0, ads:0, hr:0, revUSD:0, total:0, net:0 }; }
+      else if (mDet) { currentMonth = mDet[1]; inDetail = true; }
+      else { currentMonth = null; inDetail = false; } // cumulative / non-monthly sections
+      continue;
+    }
     if (!currentMonth) continue;
     const s = summaries[currentMonth];
     if (!inDetail) {
