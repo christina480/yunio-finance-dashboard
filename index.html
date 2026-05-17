@@ -420,8 +420,17 @@ function parseSummary(rows, name) {
 }
 
 // ── Load authoritative summaries from 财报总览 (overview sheet "6月") ─────────
+// Compute platform revenue from raw INR column (col7) at correct rate
+function computeINRRevUSD(rows) {
+  const INR_RATE = 93.25;
+  let total = 0;
+  for (const r of rows) { if (r[7] != null) total += num(r[7]); }
+  return total > 0 ? total / INR_RATE : 0;
+}
+
 async function loadOverviewSummaries() {
-  const rows = await safeSheet('6月');
+  // Overview tab was renamed from '6月' to '财报总览'; try both
+  const rows = (await safeSheet('财报总览')) || (await safeSheet('6月'));
   if (!rows) return {};
   const summaries = {};
   let currentMonth = null;
@@ -692,6 +701,13 @@ async function loadAll() {
       if (!summary) {
         if (!rows) return null;
         summary = parseSummary(rows, name);
+      } else if (rows) {
+        // Merge: use sheet's expense calculation (includes all rows) + correct INR revenue
+        const sheetSummary = parseSummary(rows, name);
+        if (sheetSummary && sheetSummary.total > 0) {
+          const revUSD = summary.revUSD || computeINRRevUSD(rows);
+          summary = { ...sheetSummary, revUSD, net: revUSD - sheetSummary.total };
+        }
       }
       if (!summary) return null;
       // Skip months with no data at all
