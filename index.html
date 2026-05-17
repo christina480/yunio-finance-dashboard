@@ -416,15 +416,41 @@ function parseSummary(rows, name) {
       return { name, proj, ads, hr, revUSD, total, net };
     }
   }
+  // --- Approach 3: 4月 new format — summary values in col3 (D column), rows with col0/1/2 all null ---
+  // This occurs when the currency column was removed, shifting summary data to col3.
+  const c3Rows = rows.filter(r =>
+    (r[0] === null || r[0] === undefined) &&
+    (r[1] === null || r[1] === undefined) &&
+    (r[2] === null || r[2] === undefined) &&
+    r[3] != null && num(r[3]) !== 0);
+  if (c3Rows.length >= 6) {
+    const m = c3Rows.length;
+    const proj  = Math.abs(num(c3Rows[m-6][3]));
+    const ads   = Math.abs(num(c3Rows[m-5][3]));
+    const hr    = Math.abs(num(c3Rows[m-4][3]));
+    // n-3 slot has revenue at wrong rate (÷280) — skip it; compute from raw INR col5 instead
+    const total = Math.abs(num(c3Rows[m-2][3]));
+    if (total > 0) {
+      const revUSD = computeINRRevUSD(rows);
+      const net = revUSD - total;
+      return { name, proj, ads, hr, revUSD, total, net };
+    }
+  }
   return null;
 }
 
 // ── Load authoritative summaries from 财报总览 (overview sheet "6月") ─────────
-// Compute platform revenue from raw INR column (col7) at correct rate
+// Compute platform revenue from raw INR column at correct rate.
+// Old format (3月 style): INR in col7; New format (4月/5月 style): INR in col5.
+// The INR column stores daily NET INR cash flow — sum of all values = net INR revenue.
 function computeINRRevUSD(rows) {
   const INR_RATE = 93.25;
+  // Detect format: first row with a category has string 'USD'/'RMB' in col3 → old format
+  const firstDataRow = rows.find(r => r[1] != null && String(r[1]).trim() !== '');
+  const isOldFmt = firstDataRow && (String(firstDataRow[3]) === 'USD' || String(firstDataRow[3]) === 'RMB' || String(firstDataRow[3]) === 'INR');
+  const col = isOldFmt ? 7 : 5;
   let total = 0;
-  for (const r of rows) { if (r[7] != null) total += num(r[7]); }
+  for (const r of rows) { if (r[col] != null && typeof r[col] === 'number') total += r[col]; }
   return total > 0 ? total / INR_RATE : 0;
 }
 
@@ -696,10 +722,12 @@ async function loadAll() {
     // Load per-month transaction data; use overview summary when available
     const results = await Promise.all(ALL_MONTHS.map(async name => {
       const rows = await safeSheet(name);
-      // Use overview (财报总览) as the authoritative source for all monthly summaries.
-      // The overview uses the correct INR/USD rate (÷93.25) and verified totals.
-      // Only fall back to sheet parsing if a month is missing from the overview.
+      // Use overview (财报总览) as authoritative source when valid.
+      // If the overview shows a total > 50,000 for a monthly sheet, it's reading INR as USD
+      // (happens when column layout shifted — INR ÷ 93.25 rate applied wrongly).
+      // In that case, fall back to direct sheet parsing.
       let summary = overviewSummaries[name] || null;
+      if (summary && summary.total > 50000) summary = null; // INR-scale value leaked into USD total
       if (!summary) {
         if (!rows) return null;
         summary = parseSummary(rows, name);
