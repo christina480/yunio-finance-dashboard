@@ -2,5 +2,995 @@
 <html lang="zh-CN" id="html-root">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Yunio Financial Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">财报总览</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232563eb'/%3E%3Crect x='4' y='20' width='6' height='8' rx='1.5' fill='white' opacity='.9'/%3E%3Crect x='13' y='13' width='6' height='15' rx='1.5' fill='white' opacity='.9'/%3E%3Crect x='22' y='6' width='6' height='22' rx='1.5' fill='white' opacity='.9'/%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#f1f5f9;--card:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;
+  --blue:#2563eb;--blue-lt:#dbeafe;--green:#059669;--green-lt:#d1fae5;
+  --red:#dc2626;--red-lt:#fee2e2;--orange:#d97706;--orange-lt:#fef3c7;
+  --purple:#7c3aed;--purple-lt:#ede9fe;--r:12px;
+  --sh:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.page{max-width:1200px;margin:0 auto;padding:24px 20px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.header h1{font-size:22px;font-weight:700}
+.header p{color:var(--muted);font-size:13px;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:10px}
+#refreshTime{font-size:12px;color:var(--muted)}
+.btn{background:var(--blue);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:500;transition:opacity .15s}
+.btn:hover{opacity:.85}.btn:disabled{opacity:.5;cursor:not-allowed}
+.lang-btn{background:transparent;border:1px solid var(--border);padding:5px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
+.lang-btn:hover{border-color:var(--blue);color:var(--blue)}
+.spin{animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-bar{height:3px;background:var(--blue-lt);border-radius:2px;overflow:hidden;margin-bottom:20px;display:none}
+.loading-bar.active{display:block}
+.loading-bar::after{content:'';display:block;height:100%;width:30%;background:var(--blue);animation:slide 1.2s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(433%)}}
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:24px}
+.kpi-card{background:var(--card);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh);border:1px solid var(--border)}
+.kpi-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.kpi-value{font-size:24px;font-weight:700}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.red{color:var(--red)}.green{color:var(--green)}.blue{color:var(--blue)}.orange{color:var(--orange)}.purple{color:var(--purple)}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+.bg-red{background:var(--red-lt);color:var(--red)}.bg-green{background:var(--green-lt);color:var(--green)}
+.bg-blue{background:var(--blue-lt);color:var(--blue)}.bg-orange{background:var(--orange-lt);color:var(--orange)}
+/* Charts */
+.charts-row{display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:24px}
+.card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);border:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px}
+.chart-wrap canvas{max-height:260px}
+/* Monthly sections */
+.section-header{font-size:16px;font-weight:700;color:var(--text);margin:28px 0 14px;padding-left:2px;border-left:4px solid var(--blue);padding-left:10px}
+.monthly-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-bottom:24px}
+.month-card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);border:1px solid var(--border)}
+.month-card-current{border:2px solid #2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1),var(--sh)}
+.badge-current{display:inline-block;background:#2563eb;color:#fff;font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle;letter-spacing:.3px}
+.month-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.month-card-title{font-size:15px;font-weight:700}
+.stat-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+.stat-row:last-child{border:none}
+.stat-label{color:var(--muted)}
+.stat-value{font-weight:600;text-align:right}
+.prog{height:4px;background:var(--border);border-radius:2px;margin-top:5px;overflow:hidden;width:90px}
+.prog-fill{height:100%;border-radius:2px}
+.divider{height:1px;background:var(--border);margin:6px 0}
+/* Transactions */
+.txn-section{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh);border:1px solid var(--border)}
+.txn-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.tabs{display:flex;gap:4px;background:var(--bg);padding:3px;border-radius:8px;flex-wrap:wrap}
+.tab{padding:5px 14px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s}
+.tab.active{background:var(--card);color:var(--text);box-shadow:var(--sh)}
+.srch{position:relative}
+.srch input{padding:6px 10px 6px 28px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);outline:none;width:190px}
+.srch input:focus{border-color:var(--blue)}
+.srch-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #f8fafc;white-space:nowrap}
+tr:hover td{background:#f8fafc}
+tr:last-child td{border:none}
+.cat{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
+.c0{background:var(--blue-lt);color:var(--blue)}.c1{background:var(--orange-lt);color:var(--orange)}.c2{background:var(--purple-lt);color:var(--purple)}
+.txn-count{font-size:12px;color:var(--muted)}
+.msg{color:var(--muted);font-size:13px;padding:30px;text-align:center}
+.err{color:var(--red);font-size:13px;padding:20px;text-align:center}
+@media(max-width:768px){
+  .charts-row{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .monthly-grid{grid-template-columns:1fr}
+}
+/* ── AI Q&A ──────────────────────────────────────────────────────────────── */
+/* ── AI Floating Button & Popup ── */
+.ai-fab{position:fixed;bottom:28px;left:28px;width:54px;height:54px;border-radius:50%;background:var(--blue);color:#fff;border:none;cursor:pointer;font-size:26px;box-shadow:0 4px 18px rgba(59,130,246,.45);z-index:1100;display:flex;align-items:center;justify-content:center;transition:transform .2s,box-shadow .2s;line-height:1}
+.ai-fab:hover{transform:scale(1.1);box-shadow:0 6px 22px rgba(59,130,246,.55)}
+.ai-fab.open{background:#1d4ed8}
+.ai-popup{position:fixed;bottom:94px;left:28px;width:360px;max-height:540px;background:var(--card);border-radius:16px;box-shadow:0 8px 36px rgba(0,0,0,.18);z-index:1099;display:none;flex-direction:column;overflow:hidden;border:1px solid var(--border)}
+.ai-popup.open{display:flex}
+.ai-popup-header{background:var(--blue);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px;gap:8px}
+.ai-popup-header span{flex:1}
+.ai-popup-close{background:none;border:none;color:#fff;cursor:pointer;font-size:18px;line-height:1;padding:0;opacity:.8}
+.ai-popup-close:hover{opacity:1}
+.ai-popup-body{flex:1;overflow-y:auto;padding:14px}
+.ai-setup-box{background:var(--blue-lt);border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px}
+.ai-setup-box p{font-size:12px;color:var(--text);line-height:1.65;margin-bottom:10px}
+.ai-setup-box a{color:var(--blue);text-decoration:none;font-weight:500}
+.ai-setup-box a:hover{text-decoration:underline}
+.ai-key-row{display:flex;gap:8px}
+.ai-key-row input{flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:monospace;background:var(--card);color:var(--text);min-width:0}
+.ai-key-row input:focus{outline:none;border-color:var(--blue)}
+.ai-messages{height:260px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--bg);border-radius:10px;border:1px solid var(--border);margin-bottom:10px;scroll-behavior:smooth}
+.ai-msg{max-width:82%;padding:8px 12px;border-radius:14px;font-size:12.5px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
+.ai-msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-radius:14px 14px 2px 14px}
+.ai-msg.bot{align-self:flex-start;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px 14px 14px 2px}
+.ai-msg.bot.thinking{color:var(--muted);font-style:italic}
+.ai-msg.bot.err{color:var(--red);border-color:#fca5a5}
+.ai-input-row{display:flex;gap:8px}
+.ai-input-row input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);color:var(--text);min-width:0}
+.ai-input-row input:focus{outline:none;border-color:var(--blue)}
+.ai-input-row input:disabled{opacity:.5}
+.ai-footer{display:flex;justify-content:flex-end;margin-top:6px}
+.ai-reset-btn{font-size:11.5px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0}
+.ai-reset-btn:hover{color:var(--red);text-decoration:underline}
+.ai-suggestions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.ai-sug{padding:4px 10px;border:1px solid var(--blue);border-radius:20px;font-size:11.5px;color:var(--blue);cursor:pointer;background:transparent;transition:all .15s;white-space:nowrap}
+.ai-sug:hover{background:var(--blue);color:#fff}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="header">
+  <div>
+    <h1 id="header-h1">📊 财报总览</h1>
+    <p id="header-subtitle">数据实时同步自 Google Sheets</p>
+  </div>
+  <div class="header-right">
+    <span id="refreshTime">加载中…</span>
+    <button class="lang-btn" id="langToggle" onclick="toggleLang()">EN</button>
+    <button class="btn" id="btnRefresh" onclick="loadAll()">
+      <span id="refreshIcon">↻</span> <span id="refresh-btn-text">刷新数据</span>
+    </button>
+  </div>
+</div>
+
+<div class="loading-bar" id="loadingBar"></div>
+
+<!-- Cumulative KPI cards -->
+<div class="kpi-grid">
+  <div class="kpi-card month-card-current">
+    <div class="kpi-label" id="kpi-label-curnet">当月净亏损 <span class="badge-current" style="font-size:10px">当月</span></div>
+    <div class="kpi-value red" id="k-curnet">—</div>
+    <div class="kpi-sub" id="kpi-sub-curnet">最新月份收入 − 支出</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label" id="kpi-label-exp">累计总支出</div>
+    <div class="kpi-value red" id="k-exp">—</div>
+    <div class="kpi-sub" id="kpi-sub-exp">所有月份合计</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label" id="kpi-label-rev">总平台收入</div>
+    <div class="kpi-value green" id="k-rev">—</div>
+    <div class="kpi-sub" id="k-rev-sub">所有月份合计</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label" id="kpi-label-net">累计净亏损</div>
+    <div class="kpi-value red" id="k-net">—</div>
+    <div class="kpi-sub" id="kpi-sub-net">收入 − 支出</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label" id="kpi-label-ads">广告投放</div>
+    <div class="kpi-value orange" id="k-ads">—</div>
+    <div class="kpi-sub" id="k-ads-sub">最新月份广告 ROI</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label" id="kpi-label-burn">日均烧钱</div>
+    <div class="kpi-value" id="k-burn">—</div>
+    <div class="kpi-sub" id="kpi-sub-burn">已运营天数均摊</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label" id="kpi-label-hr">人员成本占比</div>
+    <div class="kpi-value purple" id="k-hr">—</div>
+    <div class="kpi-sub" id="kpi-sub-hr">最新月份人员 / 总支出</div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-row">
+  <div class="card">
+    <div class="card-title" id="chart-bar-title">📈 月度损益对比</div>
+    <div class="chart-wrap"><canvas id="chartBar"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title" id="chart-donut-title">🥧 最新月份支出结构</div>
+    <div class="chart-wrap"><canvas id="chartDonut"></canvas></div>
+  </div>
+</div>
+
+<!-- Per-month sections (dynamically rendered) -->
+<div id="monthly-section-header" class="section-header" style="display:none">📅 各月收支明细</div>
+<div class="monthly-grid" id="monthly-grid"></div>
+
+<!-- Transaction table -->
+<div class="txn-section">
+  <div class="txn-header">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="card-title" style="margin:0" id="txn-title">📋 全部交易明细</div>
+      <span class="txn-count" id="txn-count"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div class="tabs" id="txn-tabs">
+        <button class="tab active" id="tab-all" onclick="filterTab('all',this)" data-key="all">全部</button>
+      </div>
+      <div class="srch">
+        <span class="srch-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="搜索明细…" oninput="renderTable()">
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th id="th-date">日期</th>
+        <th id="th-month">月份</th>
+        <th id="th-cat">支出类别</th>
+        <th id="th-detail">明细</th>
+        <th id="th-cur">原币</th>
+        <th id="th-orig" style="text-align:right">原币金额</th>
+        <th id="th-usd" style="text-align:right">美金 (USD)</th>
+        <th id="th-inr" style="text-align:right">平台收入 (INR)</th>
+        <th id="th-net" style="text-align:right">当日净额</th>
+      </tr></thead>
+      <tbody id="txnBody"></tbody>
+    </table>
+    <div id="txnMsg" class="msg" style="display:none"></div>
+  </div>
+</div>
+
+
+
+</div>
+
+<!-- ── AI Floating Button ── -->
+<button class="ai-fab" id="ai-fab" onclick="aiTogglePopup()" title="财务助手">🤖</button>
+
+<!-- ── AI Popup ── -->
+<div class="ai-popup" id="ai-popup">
+  <div class="ai-popup-header">
+    <span>🤖 财务助手</span>
+    <button class="ai-popup-close" onclick="aiTogglePopup()" title="关闭">✕</button>
+  </div>
+  <div class="ai-popup-body">
+    <!-- Chat interface (server-side proxy, no key needed) -->
+    <div id="ai-chat">
+      <div id="ai-messages" class="ai-messages"></div>
+      <div class="ai-input-row">
+        <input type="text" id="ai-input" placeholder="输入问题，按 Enter 发送…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend()}" />
+        <button class="btn" id="ai-send-btn" onclick="aiSend()"><span id="ai-send-icon">➤</span> <span id="ai-send-text">发送</span></button>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+<script>
+const SID = '1HKvW-0EbJDzXVPzvk-LiKyk7JLzeBklhPegPIZJYI8A';
+const INR_RATE = 93.25;
+// Monthly data sheets (exclude overview sheet '6月')
+const ALL_MONTHS = ['3月','4月','5月','7月','8月','9月','10月','11月','12月'];
+// '6月' is the 财报总览 overview sheet (authoritative summaries), not a monthly data sheet
+
+let monthlyData = []; // [{ name, summary, txns }]
+let allTxns = [];
+let activeTab = 'all';
+let barChart = null, donutChart = null;
+let currentLang = 'zh';
+
+// ── Translations ─────────────────────────────────────────────────────────────
+const T = {
+  zh: {
+    htmlLang:'zh-CN', pageTitle:'财报总览', h1:'📊 财报总览',
+    subtitle: m => `数据实时同步自 Google Sheets · ${m}`,
+    refreshBtn:'刷新数据', langToggle:'EN',
+    loadingText:'加载中…', loadFailed:'加载失败',
+    kpiCurNet:'当月净亏损', kpiCurNetSub:'最新月份收入 − 支出',
+    kpiExp:'累计总支出', kpiExpSub:'所有月份合计',
+    kpiRev:'总平台收入', kpiRevSub:'所有月份合计',
+    kpiNet:'累计净亏损', kpiNetSub:'收入 − 支出',
+    kpiAds:'广告投放', kpiAdsSub:'最新月份广告 ROI',
+    kpiBurn:'日均烧钱', kpiBurnSub:'已运营天数均摊',
+    kpiHR:'人员成本占比', kpiHRSub:'最新月份人员 / 总支出',
+    roiSub: r => `ROI ${r}%  (收入/广告支出)`,
+    roiNoData:'暂无收入数据',
+    burnSuffix:'/天',
+    updatedAt: t => `更新于 ${t}`,
+    chartBarTitle:'📈 月度损益对比',
+    chartDonutTitle: m => `🥧 ${m}支出结构`,
+    monthlySectionHeader:'📅 各月收支明细',
+    statsLabels:['项目支出','投放支出','人员支出','总支出','平台收入','净利润'],
+    txnTitle:'📋 全部交易明细',
+    records:'条记录',
+    tabAll:'全部',
+    searchPH:'搜索明细…',
+    thDate:'日期', thMonth:'月份', thCat:'支出类别', thDetail:'明细',
+    thCur:'原币', thOrig:'原币金额', thUSD:'美金 (USD)',
+    thINR:'平台收入 (INR)', thNet:'当日净额',
+    catMap:{'项目支出':'项目支出','投放支出':'投放支出','人员支出':'人员支出'},
+    noData:'暂无匹配数据',
+    errPrefix:'数据加载失败：',
+    errSuffix:'（请确认表格已设为"任何人可查看"）',
+  },
+  en: {
+    htmlLang:'en', pageTitle:'Financial Report', h1:'📊 Financial Report',
+    subtitle: m => `Real-time sync from Google Sheets · ${m}`,
+    refreshBtn:'Refresh', langToggle:'中文',
+    loadingText:'Loading…', loadFailed:'Load failed',
+    kpiCurNet:'Current Month Net', kpiCurNetSub:'Latest month revenue − expenses',
+    kpiExp:'Total Expenses', kpiExpSub:'All months combined',
+    kpiRev:'Platform Revenue', kpiRevSub:'All months combined',
+    kpiNet:'Net Loss', kpiNetSub:'Revenue − Expenses',
+    kpiAds:'Ad Spend', kpiAdsSub:'Latest month ROI',
+    kpiBurn:'Daily Burn', kpiBurnSub:'Avg. over operating days',
+    kpiHR:'Headcount %', kpiHRSub:'Latest month headcount / expenses',
+    roiSub: r => `ROI ${r}%  (Revenue / Ad Spend)`,
+    roiNoData:'No revenue data yet',
+    burnSuffix:'/day',
+    updatedAt: t => `Updated at ${t}`,
+    chartBarTitle:'📈 Monthly P&L Comparison',
+    chartDonutTitle: m => `🥧 ${m} Expense Structure`,
+    monthlySectionHeader:'📅 Monthly Breakdown',
+    statsLabels:['Project','Ad Spend','Headcount','Total Expenses','Platform Revenue','Net Profit'],
+    txnTitle:'📋 All Transactions',
+    records:'records',
+    tabAll:'All',
+    searchPH:'Search…',
+    thDate:'Date', thMonth:'Month', thCat:'Category', thDetail:'Detail',
+    thCur:'Currency', thOrig:'Orig. Amount', thUSD:'USD',
+    thINR:'Platform Rev (INR)', thNet:'Daily Net',
+    catMap:{'项目支出':'Project','投放支出':'Ad Spend','人员支出':'Headcount'},
+    noData:'No matching data',
+    errPrefix:'Failed to load: ',
+    errSuffix:' (Ensure the sheet is set to "Anyone can view")',
+  }
+};
+
+function l() { return T[currentLang]; }
+
+function toggleLang() {
+  currentLang = currentLang === 'zh' ? 'en' : 'zh';
+  applyLang();
+}
+
+function applyLang() {
+  const t = l();
+  document.getElementById('html-root').lang = t.htmlLang;
+  document.getElementById('page-title').textContent = t.pageTitle;
+  document.getElementById('header-h1').textContent = t.h1;
+  document.getElementById('refresh-btn-text').textContent = t.refreshBtn;
+  document.getElementById('langToggle').textContent = t.langToggle;
+  document.getElementById('kpi-label-exp').textContent = t.kpiExp;
+  document.getElementById('kpi-sub-exp').textContent = t.kpiExpSub;
+  document.getElementById('kpi-label-rev').textContent = t.kpiRev;
+  document.getElementById('k-rev-sub').textContent = t.kpiRevSub;
+  document.getElementById('kpi-label-net').textContent = t.kpiNet;
+  document.getElementById('kpi-sub-net').textContent = t.kpiNetSub;
+  document.getElementById('kpi-label-ads').textContent = t.kpiAds;
+  document.getElementById('k-ads-sub').textContent = t.kpiAdsSub;
+  document.getElementById('kpi-label-burn').textContent = t.kpiBurn;
+  document.getElementById('kpi-sub-burn').textContent = t.kpiBurnSub;
+  document.getElementById('kpi-label-hr').textContent = t.kpiHR;
+  document.getElementById('kpi-sub-hr').textContent = t.kpiHRSub;
+  document.getElementById('chart-bar-title').textContent = t.chartBarTitle;
+  document.getElementById('txn-title').textContent = t.txnTitle;
+  document.getElementById('th-date').textContent = t.thDate;
+  document.getElementById('th-month').textContent = t.thMonth;
+  document.getElementById('th-cat').textContent = t.thCat;
+  document.getElementById('th-detail').textContent = t.thDetail;
+  document.getElementById('th-cur').textContent = t.thCur;
+  document.getElementById('th-orig').textContent = t.thOrig;
+  document.getElementById('th-usd').textContent = t.thUSD;
+  document.getElementById('th-inr').textContent = t.thINR;
+  document.getElementById('th-net').textContent = t.thNet;
+  document.getElementById('searchInput').placeholder = t.searchPH;
+  if (monthlyData.length > 0) {
+    renderKPIs();
+    renderMonthlyCards();
+    renderCharts();
+    renderTable();
+  }
+}
+
+// ── Data helpers ──────────────────────────────────────────────────────────────
+async function fetchSheet(name) {
+  const url = `https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(name)}&headers=0`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const txt = await r.text();
+  const m = txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?\s*$/);
+  if (!m) throw new Error('parse error');
+  const j = JSON.parse(m[1]);
+  return j.table.rows.map(row => row.c.map(c => c ? c.v : null));
+}
+
+async function safeSheet(name) {
+  try { return await fetchSheet(name); } catch(e) { return null; }
+}
+
+function num(v) {
+  if (v == null || v === '') return 0;
+  if (typeof v === 'number') return v;
+  return parseFloat(String(v).replace(/[$,¥₹\s]/g,'')) || 0;
+}
+
+function usd(n, sign) {
+  const a = Math.abs(n);
+  const s = '$' + a.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (n < 0) return '-' + s;
+  if (sign && n > 0) return '+' + s;
+  return s;
+}
+
+function inrFmt(n) {
+  if (!n) return '—';
+  const a = Math.abs(n);
+  return (n<0?'-':'+') + '₹' + a.toLocaleString('en-IN',{maximumFractionDigits:0});
+}
+
+function gvizDate(v) {
+  if (!v) return null;
+  const m = String(v).match(/Date\((\d+),(\d+),(\d+)\)/);
+  if (m) return `${parseInt(m[2]) + 1}月${parseInt(m[3])}日`;
+  return /\d+月\d+日/.test(String(v)) ? String(v) : null;
+}
+
+// Parses summary rows (rows where both col A and col B are null).
+// Sheet structure (last 6 null-row entries):
+//   n-6: project cost  (col F = index 5)
+//   n-5: ad spend      (col F = index 5)
+//   n-4: personnel     (col F = index 5)
+//   n-3: revenue       (col F = index 5, USD value)
+//   n-2: total expense (col F = index 5)
+//   n-1: net income    (col F = index 5)
+function parseSummary(rows, name) {
+  // --- Approach 1: Standard format (3月/4月-style) ---
+  // Rows where both A and B are null, summary values in col F (index 5)
+  const subs = rows.filter(r =>
+    (r[0] === null || r[0] === undefined) &&
+    (r[1] === null || r[1] === undefined));
+  const n = subs.length;
+  if (n >= 6) {
+    const proj   = Math.abs(num(subs[n-6][5]));
+    const ads    = Math.abs(num(subs[n-5][5]));
+    const hr     = Math.abs(num(subs[n-4][5]));
+    const revUSD = Math.abs(num(subs[n-3][5]));
+    const total  = Math.abs(num(subs[n-2][5]));
+    const net    = num(subs[n-1][5]);
+    if (total > 0 || Math.abs(net) > 0) return { name, proj, ads, hr, revUSD, total, net };
+  }
+  // --- Approach 2: Simplified format (5月-style) ---
+  const nullARows = rows.filter(r => r[0] === null || r[0] === undefined);
+  const bValRows = nullARows.filter(r => r[1] !== null && r[1] !== undefined && r[1] !== '');
+  if (bValRows.length >= 3) {
+    const revUSD = Math.abs(num(bValRows[bValRows.length-3][1]));
+    const total  = Math.abs(num(bValRows[bValRows.length-2][1]));
+    const net    = num(bValRows[bValRows.length-1][1]);
+    if (total > 0 || Math.abs(net) > 0) {
+      const costBRows = bValRows.slice(0, -3).filter(r => num(r[1]) > 0);
+      const costDRows = nullARows.filter(r =>
+        (r[1] === null || r[1] === undefined || r[1] === '') &&
+        r[3] !== null && r[3] !== undefined && r[3] !== '' && num(r[3]) !== 0);
+      const useBCol = costBRows.length > 0;
+      const costRows = useBCol ? costBRows : costDRows;
+      const getVal = r => useBCol ? Math.abs(num(r[1])) : Math.abs(num(r[3]));
+      const proj = costRows.length >= 1 ? getVal(costRows[0]) : 0;
+      const ads  = costRows.length >= 2 ? getVal(costRows[1]) : 0;
+      const hr   = costRows.length >= 3 ? getVal(costRows[2]) : 0;
+      return { name, proj, ads, hr, revUSD, total, net };
+    }
+  }
+  // --- Approach 3: 4月 new format — summary values in col3 (D column), rows with col0/1/2 all null ---
+  // This occurs when the currency column was removed, shifting summary data to col3.
+  const c3Rows = rows.filter(r =>
+    (r[0] === null || r[0] === undefined) &&
+    (r[1] === null || r[1] === undefined) &&
+    (r[2] === null || r[2] === undefined) &&
+    r[3] != null && num(r[3]) !== 0);
+  if (c3Rows.length >= 6) {
+    const m = c3Rows.length;
+    const proj  = Math.abs(num(c3Rows[m-6][3]));
+    const ads   = Math.abs(num(c3Rows[m-5][3]));
+    const hr    = Math.abs(num(c3Rows[m-4][3]));
+    // n-3 slot has revenue at wrong rate (÷280) — skip it; compute from raw INR col5 instead
+    // Read rev and net directly from the sheet's own summary rows (col3)
+    const revUSD = Math.abs(num(c3Rows[m-3][3]));
+    const total  = Math.abs(num(c3Rows[m-2][3]));
+    const net    = num(c3Rows[m-1][3]);
+    if (total > 0) {
+      return { name, proj, ads, hr, revUSD, total, net };
+    }
+  }
+  return null;
+}
+
+// ── Load authoritative summaries from 财报总览 (overview sheet "6月") ─────────
+// Compute platform revenue from raw INR column at correct rate.
+// Old format (3月 style): INR in col7; New format (4月/5月 style): INR in col5.
+// The INR column stores daily NET INR cash flow — sum of all values = net INR revenue.
+function computeINRRevUSD(rows) {
+  const INR_RATE = 93.25;
+  // Detect format: first row with a category has string 'USD'/'RMB' in col3 → old format
+  const firstDataRow = rows.find(r => r[1] != null && String(r[1]).trim() !== '');
+  const isOldFmt = firstDataRow && (String(firstDataRow[3]) === 'USD' || String(firstDataRow[3]) === 'RMB' || String(firstDataRow[3]) === 'INR');
+  const col = isOldFmt ? 7 : 5;
+  let total = 0;
+  for (const r of rows) { if (r[col] != null && typeof r[col] === 'number') total += r[col]; }
+  return total > 0 ? total / INR_RATE : 0;
+}
+
+async function loadOverviewSummaries() {
+  // Overview tab was renamed from '6月' to '财报总览'; try both
+  const rows = (await safeSheet('财报总览')) || (await safeSheet('6月'));
+  if (!rows) return {};
+  const summaries = {};
+  let currentMonth = null;
+  let inDetail = false;
+  for (const r of rows) {
+    const a = r[0] != null ? String(r[0]).trim() : '';
+    const b = r[1];
+    const mSum = a.match(/▌\s*(\d+月)\s*汇总/);
+    const mDet = a.match(/▌\s*(\d+月)\s*支出分类明细/);
+    if (a.includes('▌')) {
+      if (mSum) { currentMonth = mSum[1]; inDetail = false; if (!summaries[currentMonth]) summaries[currentMonth] = { name: currentMonth, proj:0, ads:0, hr:0, revUSD:0, total:0, net:0 }; }
+      else if (mDet) { currentMonth = mDet[1]; inDetail = true; }
+      else { currentMonth = null; inDetail = false; } // cumulative / non-monthly sections
+      continue;
+    }
+    if (!currentMonth) continue;
+    const s = summaries[currentMonth];
+    if (!inDetail) {
+      if (a === '总支出')   s.total  = Math.abs(num(b));
+      if (a === '平台收入') s.revUSD = Math.abs(num(b));
+      if (a === '净利润')   s.net    = num(b);
+    } else {
+      if (a === '项目费用') s.proj = Math.abs(num(b));
+      if (a === '广告投放') s.ads  = Math.abs(num(b));
+      if (a === '人员成本') s.hr   = Math.abs(num(b));
+    }
+  }
+  return summaries;
+}
+
+const KNOWN_CATS = new Set(['项目支出','投放支出','人员支出']);
+
+function parseTxns(rows, month) {
+  const out = [];
+  let ld = '';
+  for (const r of rows) {
+    const d = gvizDate(r[0]);
+    if (d) ld = d;
+    const cat = r[1] ? String(r[1]).trim() : '';
+    if (KNOWN_CATS.has(cat)) {
+      // Detect column format: old (3月/4月) has r[3]='USD' string; new (5月+) has r[3]=number
+      const isNewFmt = (r[3] !== null && r[3] !== undefined && r[3] !== 'USD' && r[3] !== 'INR' && !isNaN(parseFloat(r[3])));
+      if (isNewFmt) {
+        // 5月+ style: col3=amount, col4=cumulative, col5=INR revenue, col6=daily net
+        out.push({ month, date: ld, cat,
+          detail: r[2]||'', cur: 'USD',
+          orig: num(r[3]), usd: Math.abs(num(r[3])),
+          inrRev: num(r[5]), net: num(r[6]) });
+      } else {
+        // 3月/4月 style: col3=currency, col4=orig, col5=usd, col7=inrRev, col8=net
+        out.push({ month, date: ld, cat,
+          detail: r[2]||'', cur: r[3]||'USD',
+          orig: num(r[4]), usd: Math.abs(num(r[5])),
+          inrRev: num(r[7]), net: num(r[8]) });
+      }
+    }
+  }
+  return out;
+}
+
+function set(id, v) { const el = document.getElementById(id); if(el) el.textContent = v; }
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderKPIs() {
+  const t = l();
+  const totExp = monthlyData.reduce((s, m) => s + m.summary.total, 0);
+  const totRev = monthlyData.reduce((s, m) => s + m.summary.revUSD, 0);
+  const net = totRev - totExp;
+  const latest = monthlyData[monthlyData.length - 1].summary;
+  const roi = latest.ads > 0 ? (latest.revUSD / latest.ads * 100).toFixed(1) : null;
+  // Estimate operating days: assume ~30 days per month
+  const opDays = monthlyData.length * 30;
+  const burn = totExp / opDays;
+  const hrPct = latest.total > 0 ? (latest.hr / latest.total * 100).toFixed(1) : '—';
+
+  const curNet = latest.revUSD - latest.total;
+
+  set('k-curnet', usd(curNet));
+  document.getElementById('kpi-sub-curnet').textContent = t.kpiCurNetSub;
+  document.getElementById('kpi-label-curnet').innerHTML = t.kpiCurNet + ` <span class="badge-current" style="font-size:10px">${currentLang==='zh'?'当月':'Current'}</span>`;
+  set('k-exp', usd(totExp));
+  set('k-rev', usd(totRev));
+  set('k-net', usd(net));
+  set('k-ads', usd(latest.ads));
+  document.getElementById('k-ads-sub').textContent = roi ? t.roiSub(roi) : t.roiNoData;
+  set('k-burn', usd(burn) + t.burnSuffix);
+  set('k-hr', hrPct + '%');
+
+  // Update subtitle with month range
+  const names = monthlyData.map(m => m.summary.name);
+  const range = names.length > 1 ? `${names[0]}–${names[names.length-1]}` : names[0];
+  document.getElementById('header-subtitle').textContent = t.subtitle(`2026年${range}`);
+}
+
+function renderMonthlyCards() {
+  const t = l();
+  const grid = document.getElementById('monthly-grid');
+  const header = document.getElementById('monthly-section-header');
+
+  if (monthlyData.length === 0) { grid.innerHTML = ''; header.style.display = 'none'; return; }
+  header.style.display = 'block';
+  header.textContent = t.monthlySectionHeader;
+
+  // Sort newest month first (reverse chronological)
+  const sorted = [...monthlyData].reverse();
+  const latestName = sorted.length > 0 ? sorted[0].summary.name : null;
+
+  grid.innerHTML = sorted.map(({ summary: s }, idx) => {
+    const net = s.revUSD - s.total;
+    const netColor = net >= 0 ? '#059669' : '#dc2626';
+    const netBadgeClass = net >= 0 ? 'bg-green' : 'bg-red';
+    const isCurrent = idx === 0;
+    const currentLabel = currentLang === 'zh' ? '当月' : 'Current';
+
+    function row(label, value, color, prog) {
+      return `<div class="stat-row">
+        <span class="stat-label">${label}</span>
+        <div class="stat-value" style="color:${color}">
+          ${value}
+          ${prog > 0 ? `<div class="prog"><div class="prog-fill" style="width:${Math.min(100, prog*100).toFixed(0)}%;background:${color}"></div></div>` : ''}
+        </div>
+      </div>`;
+    }
+
+    return `<div class="month-card${isCurrent ? ' month-card-current' : ''}">
+      <div class="month-card-header">
+        <span class="month-card-title">📅 ${s.name}${isCurrent ? ` <span class="badge-current">${currentLabel}</span>` : ''}</span>
+        <span class="badge ${netBadgeClass}">${usd(net, true)}</span>
+      </div>
+      <div>
+        ${row(t.statsLabels[0], usd(s.proj), '#2563eb', s.total ? s.proj/s.total : 0)}
+        ${row(t.statsLabels[1], usd(s.ads),  '#d97706', s.total ? s.ads/s.total  : 0)}
+        ${row(t.statsLabels[2], usd(s.hr),   '#7c3aed', s.total ? s.hr/s.total   : 0)}
+        <div class="divider"></div>
+        ${row(t.statsLabels[3], usd(s.total), '#0f172a', 0)}
+        ${row(t.statsLabels[4], usd(s.revUSD), '#059669', 0)}
+        ${row(t.statsLabels[5], usd(net, true), netColor, 0)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCharts() {
+  const t = l();
+  const names = monthlyData.map(m => m.summary.name);
+  const latest = monthlyData[monthlyData.length - 1].summary;
+
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [
+        { label: t.statsLabels[0], data: monthlyData.map(m => m.summary.proj), backgroundColor:'#93c5fd', borderRadius:4 },
+        { label: t.statsLabels[1], data: monthlyData.map(m => m.summary.ads),  backgroundColor:'#fcd34d', borderRadius:4 },
+        { label: t.statsLabels[2], data: monthlyData.map(m => m.summary.hr),   backgroundColor:'#c4b5fd', borderRadius:4 },
+        { label: t.statsLabels[4], data: monthlyData.map(m => m.summary.revUSD),
+          type:'line', borderColor:'#059669', backgroundColor:'rgba(5,150,105,.15)',
+          pointBackgroundColor:'#059669', tension:.3, fill:true, borderWidth:2, yAxisID:'y' }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      scales: { x:{ stacked:true }, y:{ stacked:true, ticks:{ callback: v => '$'+v.toLocaleString() } } },
+      plugins: {
+        legend:{ position:'bottom', labels:{ boxWidth:12, padding:12 } },
+        tooltip:{ callbacks:{ label: ctx => ctx.dataset.label + ': ' + usd(ctx.raw) } }
+      }
+    }
+  });
+
+  document.getElementById('chart-donut-title').textContent = t.chartDonutTitle(latest.name);
+
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(document.getElementById('chartDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: [t.statsLabels[0], t.statsLabels[1], t.statsLabels[2]],
+      datasets: [{
+        data: [latest.proj, latest.ads, latest.hr],
+        backgroundColor: ['#3b82f6','#f59e0b','#8b5cf6'],
+        borderWidth: 2, borderColor: '#fff', hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true, cutout:'62%',
+      plugins: {
+        legend:{ position:'bottom', labels:{ boxWidth:12, padding:10 } },
+        tooltip:{ callbacks:{
+          label: ctx => {
+            const pct = latest.total > 0 ? (ctx.raw/latest.total*100).toFixed(1) : 0;
+            return ctx.label + ': ' + usd(ctx.raw) + ' (' + pct + '%)';
+          }
+        }}
+      }
+    }
+  });
+}
+
+function renderTabs() {
+  const t = l();
+  const container = document.getElementById('txn-tabs');
+  const names = monthlyData.map(m => m.summary.name);
+  container.innerHTML = `<button class="tab${activeTab==='all'?' active':''}" onclick="filterTab('all',this)">${t.tabAll}</button>` +
+    names.map(name =>
+      `<button class="tab${activeTab===name?' active':''}" onclick="filterTab('${name}',this)">${name}</button>`
+    ).join('');
+}
+
+function filterTab(val, el) {
+  activeTab = val;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function renderTable() {
+  const t = l();
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  let rows = allTxns.filter(tr =>
+    (activeTab === 'all' || tr.month === activeTab) &&
+    (!q || tr.date.includes(q) ||
+      tr.cat.includes(q) ||
+      (t.catMap[tr.cat]||'').toLowerCase().includes(q) ||
+      tr.detail.toLowerCase().includes(q) ||
+      tr.cur.toLowerCase().includes(q))
+  );
+  set('txn-count', rows.length + ' ' + t.records);
+  const body = document.getElementById('txnBody');
+  const msg  = document.getElementById('txnMsg');
+  if (!rows.length) { body.innerHTML = ''; msg.style.display='block'; msg.textContent=t.noData; return; }
+  msg.style.display = 'none';
+  const catClass = { '项目支出':'c0', '投放支出':'c1', '人员支出':'c2' };
+  body.innerHTML = rows.map(tr => `
+    <tr>
+      <td>${tr.date}</td>
+      <td>${tr.month}</td>
+      <td><span class="cat ${catClass[tr.cat]||'c0'}">${t.catMap[tr.cat]||tr.cat}</span></td>
+      <td>${tr.detail}</td>
+      <td>${tr.cur}</td>
+      <td style="text-align:right">${tr.orig.toLocaleString()}</td>
+      <td style="text-align:right;font-weight:600">${usd(tr.usd)}</td>
+      <td style="text-align:right;color:${tr.inrRev>0?'var(--green)':tr.inrRev<0?'var(--red)':'var(--muted)'}">${inrFmt(tr.inrRev)}</td>
+      <td style="text-align:right;color:${tr.net>0?'var(--green)':tr.net<0?'var(--red)':'var(--muted)'}">
+        ${tr.net !== 0 ? usd(tr.net, true) : '—'}
+      </td>
+    </tr>`).join('');
+}
+
+// ── Main load ─────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const t = l();
+  const btn  = document.getElementById('btnRefresh');
+  const icon = document.getElementById('refreshIcon');
+  const bar  = document.getElementById('loadingBar');
+  btn.disabled = true; icon.className = 'spin'; icon.textContent = '↻';
+  bar.className = 'loading-bar active';
+
+  try {
+    // Load authoritative summaries from 财报总览 overview sheet first
+    const overviewSummaries = await loadOverviewSummaries();
+
+    // Load per-month transaction data; use overview summary when available
+    const results = await Promise.all(ALL_MONTHS.map(async name => {
+      const rows = await safeSheet(name);
+      // Prefer each month's own sheet summary rows as the canonical source;
+      // fall back to overview only when sheet parsing fails.
+      let summary = rows ? parseSummary(rows, name) : null;
+      if (!summary) summary = overviewSummaries[name] || null;
+      if (summary && summary.total > 50000) summary = null; // guard: INR-scale overflow
+      if (!summary) return null;
+      // Skip months with no data at all
+      if (summary.total === 0 && summary.revUSD === 0 && summary.net === 0) return null;
+      const txns = rows ? parseTxns(rows, name) : [];
+      return { name, summary, txns };
+    }));
+
+    monthlyData = results.filter(Boolean);
+    allTxns = monthlyData.flatMap(m => m.txns);
+
+    if (monthlyData.length === 0) throw new Error('No sheet data found');
+
+    renderKPIs();
+    renderMonthlyCards();
+    renderCharts();
+    renderTabs();
+    renderTable();
+    set('refreshTime', t.updatedAt(new Date().toLocaleTimeString(currentLang==='zh'?'zh-CN':'en-US')));
+
+
+  } catch(e) {
+    console.error(e);
+    const msgEl = document.getElementById('txnMsg');
+    msgEl.style.display='block'; msgEl.className='err';
+    msgEl.textContent = t.errPrefix + e.message + t.errSuffix;
+    set('refreshTime', t.loadFailed);
+  } finally {
+    btn.disabled = false; icon.className = ''; icon.textContent = '↻';
+    bar.className = 'loading-bar';
+  }
+}
+
+// ── AI Q&A ───────────────────────────────────────────────────────────────────
+function aiTogglePopup() {
+  const popup = document.getElementById('ai-popup');
+  const fab   = document.getElementById('ai-fab');
+  const isOpen = popup.classList.toggle('open');
+  fab.classList.toggle('open', isOpen);
+  if (isOpen) {
+    const inp = document.getElementById('ai-input');
+    if (inp && !inp.disabled) setTimeout(() => inp.focus(), 80);
+  }
+}
+
+function aiInit() {
+  aiAddMsg('bot', currentLang === 'zh'
+    ? '你好！我是财务助手 🤖\n数据加载完成后，你可以问我任何财务问题，比如：\n• 5月支出最多的是哪个类别？\n• 累计亏损了多少？\n• 广告投放 ROI 怎么样？'
+    : 'Hi! I\'m your Finance AI 🤖\nOnce data loads, ask me anything — e.g.:\n• Which category had the highest spend in May?\n• What\'s the cumulative net loss?\n• How\'s our ad ROI?');
+  aiRenderSuggestions();
+}
+
+function aiAddMsg(role, text) {
+  const container = document.getElementById('ai-messages');
+  const el = document.createElement('div');
+  el.className = 'ai-msg ' + role;
+  el.textContent = text;
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+  return el;
+}
+
+function aiRenderSuggestions() {
+  const container = document.getElementById('ai-messages');
+  const isZh = currentLang === 'zh';
+  const suggestions = isZh
+    ? ['各月支出对比', '累计净亏损是多少？', '广告ROI怎么样？', '人员成本占比多少？']
+    : ['Compare monthly expenses', 'Total cumulative net loss?', 'Ad spend ROI?', 'Headcount cost ratio?'];
+  const wrap = document.createElement('div');
+  wrap.className = 'ai-suggestions';
+  wrap.id = 'ai-suggestions';
+  suggestions.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'ai-sug';
+    btn.textContent = s;
+    btn.onclick = () => { document.getElementById('ai-input').value = s; aiSend(); };
+    wrap.appendChild(btn);
+  });
+  container.appendChild(wrap);
+  container.scrollTop = container.scrollHeight;
+}
+
+function aiBuildContext() {
+  if (!monthlyData || monthlyData.length === 0) return null;
+  const isZh = currentLang === 'zh';
+  const lines = [isZh ? '【财务数据 — 截至最新月份】' : '[Yunio Financial Data — as of latest month]', ''];
+  let cumExp = 0, cumRev = 0;
+  monthlyData.forEach(({ summary: s }) => {
+    cumExp += s.total; cumRev += s.revUSD;
+    const net = s.revUSD - s.total;
+    if (isZh) {
+      lines.push(`${s.name}：总支出 ${s.total.toFixed(2)}（项目支出 ${s.proj.toFixed(2)}，广告投放 ${s.ads.toFixed(2)}，人员支出 ${s.hr.toFixed(2)}），平台收入 ${s.revUSD.toFixed(2)}，净利润 ${net.toFixed(2)}`);
+    } else {
+      lines.push(`${s.name}: Expense ${s.total.toFixed(2)} (Project ${s.proj.toFixed(2)}, Ads ${s.ads.toFixed(2)}, HR ${s.hr.toFixed(2)}), Revenue ${s.revUSD.toFixed(2)}, Net ${net.toFixed(2)}`);
+    }
+  });
+  lines.push('');
+  const cumNet = cumRev - cumExp;
+  lines.push(isZh
+    ? `累计汇总：总支出 ${cumExp.toFixed(2)}，总收入 ${cumRev.toFixed(2)}，累计净利润 ${cumNet.toFixed(2)}`
+    : `Cumulative: Expense ${cumExp.toFixed(2)}, Revenue ${cumRev.toFixed(2)}, Net ${cumNet.toFixed(2)}`);
+  if (allTxns && allTxns.length > 0) {
+    lines.push(isZh ? `交易明细共 ${allTxns.length} 条` : `Total transactions: ${allTxns.length}`);
+  }
+  return lines.join('\n');
+}
+
+async function aiSend() {
+  const input = document.getElementById('ai-input');
+  const q = input.value.trim();
+  if (!q) return;
+
+  // Remove suggestions after first real message
+  const sugEl = document.getElementById('ai-suggestions');
+  if (sugEl) sugEl.remove();
+
+  input.value = '';
+  input.disabled = true;
+  const sendBtn = document.getElementById('ai-send-btn');
+  sendBtn.disabled = true;
+  document.getElementById('ai-send-icon').textContent = '⏳';
+
+  aiAddMsg('user', q);
+  const thinkMsg = aiAddMsg('bot thinking', currentLang === 'zh' ? '思考中…' : 'Thinking…');
+
+  try {
+    const context = aiBuildContext();
+    if (!context) {
+      thinkMsg.className = 'ai-msg bot err';
+      thinkMsg.textContent = currentLang === 'zh'
+        ? '数据还未加载完成，请先点击页面顶部的「刷新数据」按钮。'
+        : 'Data not loaded yet — please click Refresh first.';
+      return;
+    }
+    const isZh = currentLang === 'zh';
+    const sysPrompt = isZh
+      ? `你是 Yunio（云赋）公司的专属财务助手，只根据以下财务数据回答问题。回答简洁准确，用中文回答。若问题与数据无关，礼貌说明范围。数据如下：\n\n${context}`
+      : `You are Yunio's financial assistant. Answer questions based solely on the data below. Be concise and accurate. If the question is outside the data scope, politely say so.\n\n${context}`;
+
+    const resp = await fetch(
+      'https://yunio-deepseek-proxy.vercel.app/api/proxy',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: sysPrompt },
+            { role: 'user', content: q }
+          ],
+          temperature: 0.25,
+          max_tokens: 900,
+          stream: false
+        })
+      }
+    );
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    const answer = data.choices?.[0]?.message?.content
+      || (isZh ? '未能获取回答，请重试。' : 'No answer returned, please try again.');
+    thinkMsg.className = 'ai-msg bot';
+    thinkMsg.textContent = answer;
+
+  } catch (e) {
+    thinkMsg.className = 'ai-msg bot err';
+    const isZh = currentLang === 'zh';
+    const rawMsg = e.message || String(e);
+    let errText = (isZh ? '出错了：' : 'Error: ') + rawMsg;
+
+    if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError') || rawMsg.includes('fetch')) {
+      errText = isZh
+        ? '网络请求失败，请稍后重试或检查网络连接。'
+        : 'Network error. Please check your connection and try again.';
+    } else if (rawMsg.includes('Insufficient Balance') || rawMsg.includes('insufficient') || rawMsg.includes('quota') || rawMsg.includes('402')) {
+      errText = isZh
+        ? '服务暂时不可用，请稍后重试。'
+        : 'Service temporarily unavailable, please try again later.';
+    } else if (rawMsg.includes('401') || rawMsg.includes('Unauthorized') || rawMsg.includes('Invalid API') || rawMsg.includes('Authentication')) {
+      errText = isZh
+        ? 'API Key 验证失败（401）。\n请点击"重新设置 API Key"，确认密钥完整无误后重新保存。'
+        : 'API key authentication failed (401). Please reset your key and try again.';
+    } else if (rawMsg.includes('403')) {
+      errText = isZh ? 'API Key 无权限（403）。请检查密钥是否已激活。' : 'Permission denied (403). Check if your key is active.';
+    } else if (rawMsg.includes('429')) {
+      errText = isZh ? '请求过于频繁（429），请稍候再试。' : 'Too many requests (429). Please wait a moment.';
+    } else if (rawMsg.includes('5')) {
+      errText = isZh ? 'AI 服务暂时不可用（' + rawMsg + '），请稍后重试。' : 'AI service temporarily unavailable (' + rawMsg + '). Try again later.';
+    }
+    thinkMsg.textContent = errText;
+    console.error('[AI Q&A error]', rawMsg, e);
+  } finally {
+    input.disabled = false;
+    sendBtn.disabled = false;
+    document.getElementById('ai-send-icon').textContent = '➤';
+    input.focus();
+  }
+}
+
+loadAll();
+aiInit();
+</script>
+</body>
+</html>
