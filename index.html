@@ -939,7 +939,7 @@ function aiBuildContext() {
 }
 
 async function aiSend() {
-  const key = localStorage.getItem(AI_KEY_LS);
+  const key = (localStorage.getItem(AI_KEY_LS) || '').trim();
   if (!key) return;
   const input = document.getElementById('ai-input');
   const q = input.value.trim();
@@ -1002,15 +1002,31 @@ async function aiSend() {
 
   } catch (e) {
     thinkMsg.className = 'ai-msg bot err';
-    let errText = (currentLang === 'zh' ? '出错了：' : 'Error: ') + e.message;
-    if (e.message.includes('Insufficient Balance') || e.message.includes('insufficient') || e.message.includes('quota')) {
-      errText = currentLang === 'zh'
-        ? '免费额度不足，请前往 cloud.siliconflow.cn 查看用量，或重新注册获取新额度。'
+    const isZh = currentLang === 'zh';
+    const rawMsg = e.message || String(e);
+    let errText = (isZh ? '出错了：' : 'Error: ') + rawMsg;
+
+    if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError') || rawMsg.includes('fetch')) {
+      errText = isZh
+        ? '网络请求失败（Failed to fetch）。\n可能原因：当前网络无法访问 api.siliconflow.cn，或浏览器拦截了跨域请求。\n建议：刷新页面后重试，或检查网络连接。'
+        : 'Network error (Failed to fetch). The browser could not reach api.siliconflow.cn. Check your network and try again.';
+    } else if (rawMsg.includes('Insufficient Balance') || rawMsg.includes('insufficient') || rawMsg.includes('quota') || rawMsg.includes('402')) {
+      errText = isZh
+        ? '免费额度不足，请前往 cloud.siliconflow.cn 查看用量。'
         : 'Insufficient balance — check your quota at cloud.siliconflow.cn.';
-    } else if (e.message.includes('Invalid API') || e.message.includes('Unauthorized') || e.message.includes('401')) {
-      errText += currentLang === 'zh' ? '\n请检查 API Key 是否正确。' : '\nPlease verify your API key.';
+    } else if (rawMsg.includes('401') || rawMsg.includes('Unauthorized') || rawMsg.includes('Invalid API') || rawMsg.includes('Authentication')) {
+      errText = isZh
+        ? 'API Key 验证失败（401）。\n请点击"重新设置 API Key"，确认密钥完整无误后重新保存。'
+        : 'API key authentication failed (401). Please reset your key and try again.';
+    } else if (rawMsg.includes('403')) {
+      errText = isZh ? 'API Key 无权限（403）。请检查密钥是否已激活。' : 'Permission denied (403). Check if your key is active.';
+    } else if (rawMsg.includes('429')) {
+      errText = isZh ? '请求过于频繁（429），请稍候再试。' : 'Too many requests (429). Please wait a moment.';
+    } else if (rawMsg.includes('5')) {
+      errText = isZh ? 'AI 服务暂时不可用（' + rawMsg + '），请稍后重试。' : 'AI service temporarily unavailable (' + rawMsg + '). Try again later.';
     }
     thinkMsg.textContent = errText;
+    console.error('[AI Q&A error]', rawMsg, e);
   } finally {
     input.disabled = false;
     sendBtn.disabled = false;
