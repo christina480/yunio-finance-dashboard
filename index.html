@@ -234,10 +234,10 @@ tr:last-child td{border:none}
   <!-- Setup panel (shown when no API key saved) -->
   <div id="ai-setup">
     <div class="ai-setup-box">
-      <p id="ai-setup-desc">使用 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Gemini API Key</a> 驱动 AI 问答（<strong>完全免费</strong>，无需绑卡）。<br>
-      获取方式：访问 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> → 点击 <em>Get API key</em> → 复制粘贴到下方。Key 仅保存在你的浏览器本地，不会上传。</p>
+      <p id="ai-setup-desc">使用 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek API Key</a> 驱动 AI 问答（<strong>注册即送免费额度</strong>，无需绑卡，国内可直接访问）。<br>
+      获取方式：访问 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com</a> → 注册/登录 → 点击 <em>创建 API Key</em> → 复制粘贴到下方。Key 仅保存在你的浏览器本地，不会上传。</p>
       <div class="ai-key-row">
-        <input type="password" id="ai-key-input" placeholder="AIza…" />
+        <input type="password" id="ai-key-input" placeholder="sk-…" />
         <button class="btn" onclick="aiSaveKey()" id="ai-save-btn">保存</button>
       </div>
     </div>
@@ -817,7 +817,7 @@ async function loadAll() {
 }
 
 // ── AI Q&A ───────────────────────────────────────────────────────────────────
-const AI_KEY_LS = 'yunio_gemini_key';
+const AI_KEY_LS = 'yunio_deepseek_key';
 
 function aiInit() {
   const key = localStorage.getItem(AI_KEY_LS);
@@ -833,7 +833,7 @@ function aiInit() {
 
 function aiSaveKey() {
   const key = document.getElementById('ai-key-input').value.trim();
-  if (!key.startsWith('AIza') || key.length < 20) {
+  if (!key.startsWith('sk-') || key.length < 20) {
     alert(currentLang === 'zh' ? 'API Key 格式有误，请检查后重试' : 'Invalid API key format, please check again');
     return;
   }
@@ -945,14 +945,19 @@ async function aiSend() {
       : `You are Yunio's financial assistant. Answer questions based solely on the data below. Be concise and accurate. If the question is outside the data scope, politely say so.\n\n${context}`;
 
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+      'https://api.deepseek.com/chat/completions',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: sysPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: q }] }],
-          generationConfig: { temperature: 0.25, maxOutputTokens: 900 }
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: sysPrompt },
+            { role: 'user', content: q }
+          ],
+          temperature: 0.25,
+          max_tokens: 900,
+          stream: false
         })
       }
     );
@@ -962,7 +967,7 @@ async function aiSend() {
       throw new Error(errData.error?.message || `HTTP ${resp.status}`);
     }
     const data = await resp.json();
-    const answer = data.candidates?.[0]?.content?.parts?.[0]?.text
+    const answer = data.choices?.[0]?.message?.content
       || (isZh ? '未能获取回答，请重试。' : 'No answer returned, please try again.');
     thinkMsg.className = 'ai-msg bot';
     thinkMsg.textContent = answer;
@@ -970,7 +975,7 @@ async function aiSend() {
   } catch (e) {
     thinkMsg.className = 'ai-msg bot err';
     let errText = (currentLang === 'zh' ? '出错了：' : 'Error: ') + e.message;
-    if (e.message.includes('API_KEY_INVALID') || e.message.includes('403')) {
+    if (e.message.includes('Invalid API') || e.message.includes('Unauthorized') || e.message.includes('401')) {
       errText += currentLang === 'zh' ? '\n请检查 API Key 是否正确。' : '\nPlease verify your API key.';
     }
     thinkMsg.textContent = errText;
