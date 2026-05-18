@@ -825,8 +825,8 @@ function aiInit() {
     document.getElementById('ai-setup').style.display = 'none';
     document.getElementById('ai-chat').style.display = 'block';
     aiAddMsg('bot', currentLang === 'zh'
-      ? '你好！我是 Yunio 财务助手 🤖\n数据加载完成后，你可以问我任何财务问题，比如：\n• 5月支出最多的是哪个类别？\n• 累计亏损了多少？\n• 广告投放 ROI 怎么样？'
-      : 'Hi! I\'m Yunio\'s Finance AI 🤖\nOnce data loads, ask me anything — e.g.:\n• Which category had the highest spend in May?\n• What\'s the cumulative net loss?\n• How\'s our ad ROI?');
+      ? '你好！我是财务助手 🤖\n数据加载完成后，你可以问我任何财务问题，比如：\n• 5月支出最多的是哪个类别？\n• 累计亏损了多少？\n• 广告投放 ROI 怎么样？'
+      : 'Hi! I\'m your Finance AI 🤖\nOnce data loads, ask me anything — e.g.:\n• Which category had the highest spend in May?\n• What\'s the cumulative net loss?\n• How\'s our ad ROI?');
     aiRenderSuggestions();
   }
 }
@@ -888,7 +888,7 @@ function aiRenderSuggestions() {
 function aiBuildContext() {
   if (!monthlyData || monthlyData.length === 0) return null;
   const isZh = currentLang === 'zh';
-  const lines = [isZh ? '【Yunio（云赋）财务数据 — 截至最新月份】' : '[Yunio Financial Data — as of latest month]', ''];
+  const lines = [isZh ? '【财务数据 — 截至最新月份】' : '[Yunio Financial Data — as of latest month]', ''];
   let cumExp = 0, cumRev = 0;
   monthlyData.forEach(({ summary: s }) => {
     cumExp += s.total; cumRev += s.revUSD;
@@ -975,7 +975,11 @@ async function aiSend() {
   } catch (e) {
     thinkMsg.className = 'ai-msg bot err';
     let errText = (currentLang === 'zh' ? '出错了：' : 'Error: ') + e.message;
-    if (e.message.includes('Invalid API') || e.message.includes('Unauthorized') || e.message.includes('401')) {
+    if (e.message.includes('Insufficient Balance') || e.message.includes('insufficient')) {
+      errText = currentLang === 'zh'
+        ? '余额不足，请前往 platform.deepseek.com 充值（最低充值约 ¥10，可用很久）。'
+        : 'Insufficient balance — please top up at platform.deepseek.com.';
+    } else if (e.message.includes('Invalid API') || e.message.includes('Unauthorized') || e.message.includes('401')) {
       errText += currentLang === 'zh' ? '\n请检查 API Key 是否正确。' : '\nPlease verify your API key.';
     }
     thinkMsg.textContent = errText;
