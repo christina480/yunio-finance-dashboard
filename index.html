@@ -89,29 +89,39 @@ tr:last-child td{border:none}
   .monthly-grid{grid-template-columns:1fr}
 }
 /* ── AI Q&A ──────────────────────────────────────────────────────────────── */
-.ai-section{margin-top:24px}
-.ai-setup-box{background:var(--blue-lt);border:1px solid #bfdbfe;border-radius:10px;padding:18px 20px}
-.ai-setup-box p{font-size:13px;color:var(--text);line-height:1.7;margin-bottom:12px}
+/* ── AI Floating Button & Popup ── */
+.ai-fab{position:fixed;bottom:28px;left:28px;width:54px;height:54px;border-radius:50%;background:var(--blue);color:#fff;border:none;cursor:pointer;font-size:26px;box-shadow:0 4px 18px rgba(59,130,246,.45);z-index:1100;display:flex;align-items:center;justify-content:center;transition:transform .2s,box-shadow .2s;line-height:1}
+.ai-fab:hover{transform:scale(1.1);box-shadow:0 6px 22px rgba(59,130,246,.55)}
+.ai-fab.open{background:#1d4ed8}
+.ai-popup{position:fixed;bottom:94px;left:28px;width:360px;max-height:540px;background:var(--card);border-radius:16px;box-shadow:0 8px 36px rgba(0,0,0,.18);z-index:1099;display:none;flex-direction:column;overflow:hidden;border:1px solid var(--border)}
+.ai-popup.open{display:flex}
+.ai-popup-header{background:var(--blue);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px;gap:8px}
+.ai-popup-header span{flex:1}
+.ai-popup-close{background:none;border:none;color:#fff;cursor:pointer;font-size:18px;line-height:1;padding:0;opacity:.8}
+.ai-popup-close:hover{opacity:1}
+.ai-popup-body{flex:1;overflow-y:auto;padding:14px}
+.ai-setup-box{background:var(--blue-lt);border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px}
+.ai-setup-box p{font-size:12px;color:var(--text);line-height:1.65;margin-bottom:10px}
 .ai-setup-box a{color:var(--blue);text-decoration:none;font-weight:500}
 .ai-setup-box a:hover{text-decoration:underline}
 .ai-key-row{display:flex;gap:8px}
-.ai-key-row input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;background:var(--card);color:var(--text);min-width:0}
+.ai-key-row input{flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:monospace;background:var(--card);color:var(--text);min-width:0}
 .ai-key-row input:focus{outline:none;border-color:var(--blue)}
-.ai-messages{height:360px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg);border-radius:10px;border:1px solid var(--border);margin-bottom:12px;scroll-behavior:smooth}
-.ai-msg{max-width:80%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.65;word-break:break-word;white-space:pre-wrap}
+.ai-messages{height:260px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--bg);border-radius:10px;border:1px solid var(--border);margin-bottom:10px;scroll-behavior:smooth}
+.ai-msg{max-width:82%;padding:8px 12px;border-radius:14px;font-size:12.5px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
 .ai-msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-radius:14px 14px 2px 14px}
 .ai-msg.bot{align-self:flex-start;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px 14px 14px 2px}
 .ai-msg.bot.thinking{color:var(--muted);font-style:italic}
 .ai-msg.bot.err{color:var(--red);border-color:#fca5a5}
 .ai-input-row{display:flex;gap:8px}
-.ai-input-row input{flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);color:var(--text);min-width:0}
+.ai-input-row input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--card);color:var(--text);min-width:0}
 .ai-input-row input:focus{outline:none;border-color:var(--blue)}
 .ai-input-row input:disabled{opacity:.5}
-.ai-footer{display:flex;justify-content:flex-end;margin-top:8px}
-.ai-reset-btn{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0}
+.ai-footer{display:flex;justify-content:flex-end;margin-top:6px}
+.ai-reset-btn{font-size:11.5px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0}
 .ai-reset-btn:hover{color:var(--red);text-decoration:underline}
-.ai-suggestions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.ai-sug{padding:5px 12px;border:1px solid var(--blue);border-radius:20px;font-size:12px;color:var(--blue);cursor:pointer;background:transparent;transition:all .15s;white-space:nowrap}
+.ai-suggestions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.ai-sug{padding:4px 10px;border:1px solid var(--blue);border-radius:20px;font-size:11.5px;color:var(--blue);cursor:pointer;background:transparent;transition:all .15s;white-space:nowrap}
 .ai-sug:hover{background:var(--blue);color:#fff}
 </style>
 </head>
@@ -225,38 +235,45 @@ tr:last-child td{border:none}
   </div>
 </div>
 
-<!-- AI Q&A Section -->
-<div class="txn-section ai-section">
-  <div class="txn-header">
-    <div class="card-title" id="ai-section-title">🤖 AI 财务问答</div>
-  </div>
 
-  <!-- Setup panel (shown when no API key saved) -->
-  <div id="ai-setup">
-    <div class="ai-setup-box">
-      <p id="ai-setup-desc">使用 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek API Key</a> 驱动 AI 问答（<strong>注册即送免费额度</strong>，无需绑卡，国内可直接访问）。<br>
-      获取方式：访问 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com</a> → 注册/登录 → 点击 <em>创建 API Key</em> → 复制粘贴到下方。Key 仅保存在你的浏览器本地，不会上传。</p>
-      <div class="ai-key-row">
-        <input type="password" id="ai-key-input" placeholder="sk-…" />
-        <button class="btn" onclick="aiSaveKey()" id="ai-save-btn">保存</button>
+
+</div>
+
+<!-- ── AI Floating Button ── -->
+<button class="ai-fab" id="ai-fab" onclick="aiTogglePopup()" title="财务助手">🤖</button>
+
+<!-- ── AI Popup ── -->
+<div class="ai-popup" id="ai-popup">
+  <div class="ai-popup-header">
+    <span>🤖 财务助手</span>
+    <button class="ai-popup-close" onclick="aiTogglePopup()" title="关闭">✕</button>
+  </div>
+  <div class="ai-popup-body">
+    <!-- Setup panel -->
+    <div id="ai-setup">
+      <div class="ai-setup-box">
+        <p id="ai-setup-desc">使用 <a href="https://cloud.siliconflow.cn/account/ak" target="_blank" rel="noopener">SiliconFlow API Key</a> 驱动 AI 问答（<strong>永久免费额度</strong>，无需绑卡，国内可直接访问）。<br>
+        获取方式：访问 <a href="https://cloud.siliconflow.cn" target="_blank" rel="noopener">siliconflow.cn</a> → 注册/登录 → 进入「API密钥」→ 新建密钥 → 复制粘贴到下方。Key 仅保存在你的浏览器本地，不会上传。</p>
+        <div class="ai-key-row">
+          <input type="password" id="ai-key-input" placeholder="sk-…" />
+          <button class="btn" onclick="aiSaveKey()" id="ai-save-btn">保存</button>
+        </div>
+      </div>
+    </div>
+    <!-- Chat interface -->
+    <div id="ai-chat" style="display:none">
+      <div id="ai-messages" class="ai-messages"></div>
+      <div class="ai-input-row">
+        <input type="text" id="ai-input" placeholder="输入问题，按 Enter 发送…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend()}" />
+        <button class="btn" id="ai-send-btn" onclick="aiSend()"><span id="ai-send-icon">➤</span> <span id="ai-send-text">发送</span></button>
+      </div>
+      <div class="ai-footer">
+        <button class="ai-reset-btn" onclick="aiResetKey()" id="ai-reset-btn">重新设置 API Key</button>
       </div>
     </div>
   </div>
-
-  <!-- Chat interface -->
-  <div id="ai-chat" style="display:none">
-    <div id="ai-messages" class="ai-messages"></div>
-    <div class="ai-input-row">
-      <input type="text" id="ai-input" placeholder="输入问题，按 Enter 发送…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend()}" />
-      <button class="btn" id="ai-send-btn" onclick="aiSend()"><span id="ai-send-icon">➤</span> <span id="ai-send-text">发送</span></button>
-    </div>
-    <div class="ai-footer">
-      <button class="ai-reset-btn" onclick="aiResetKey()" id="ai-reset-btn">重新设置 API Key</button>
-    </div>
-  </div>
 </div>
 
-</div>
 <script>
 const SID = '1HKvW-0EbJDzXVPzvk-LiKyk7JLzeBklhPegPIZJYI8A';
 const INR_RATE = 93.25;
@@ -817,7 +834,18 @@ async function loadAll() {
 }
 
 // ── AI Q&A ───────────────────────────────────────────────────────────────────
-const AI_KEY_LS = 'yunio_deepseek_key';
+const AI_KEY_LS = 'yunio_siliconflow_key';
+
+function aiTogglePopup() {
+  const popup = document.getElementById('ai-popup');
+  const fab   = document.getElementById('ai-fab');
+  const isOpen = popup.classList.toggle('open');
+  fab.classList.toggle('open', isOpen);
+  if (isOpen) {
+    const inp = document.getElementById('ai-input');
+    if (inp && !inp.disabled) setTimeout(() => inp.focus(), 80);
+  }
+}
 
 function aiInit() {
   const key = localStorage.getItem(AI_KEY_LS);
@@ -945,12 +973,12 @@ async function aiSend() {
       : `You are Yunio's financial assistant. Answer questions based solely on the data below. Be concise and accurate. If the question is outside the data scope, politely say so.\n\n${context}`;
 
     const resp = await fetch(
-      'https://api.deepseek.com/chat/completions',
+      'https://api.siliconflow.cn/v1/chat/completions',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: 'Qwen/Qwen2.5-7B-Instruct',
           messages: [
             { role: 'system', content: sysPrompt },
             { role: 'user', content: q }
@@ -975,10 +1003,10 @@ async function aiSend() {
   } catch (e) {
     thinkMsg.className = 'ai-msg bot err';
     let errText = (currentLang === 'zh' ? '出错了：' : 'Error: ') + e.message;
-    if (e.message.includes('Insufficient Balance') || e.message.includes('insufficient')) {
+    if (e.message.includes('Insufficient Balance') || e.message.includes('insufficient') || e.message.includes('quota')) {
       errText = currentLang === 'zh'
-        ? '余额不足，请前往 platform.deepseek.com 充值（最低充值约 ¥10，可用很久）。'
-        : 'Insufficient balance — please top up at platform.deepseek.com.';
+        ? '免费额度不足，请前往 cloud.siliconflow.cn 查看用量，或重新注册获取新额度。'
+        : 'Insufficient balance — check your quota at cloud.siliconflow.cn.';
     } else if (e.message.includes('Invalid API') || e.message.includes('Unauthorized') || e.message.includes('401')) {
       errText += currentLang === 'zh' ? '\n请检查 API Key 是否正确。' : '\nPlease verify your API key.';
     }
