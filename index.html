@@ -90,10 +90,10 @@ tr:last-child td{border:none}
 }
 /* ── AI Q&A ──────────────────────────────────────────────────────────────── */
 /* ── AI Floating Button & Popup ── */
-.ai-fab{position:fixed;bottom:28px;right:28px;width:54px;height:54px;border-radius:50%;background:var(--blue);color:#fff;border:none;cursor:pointer;font-size:26px;box-shadow:0 4px 18px rgba(59,130,246,.45);z-index:1100;display:flex;align-items:center;justify-content:center;transition:transform .2s,box-shadow .2s;line-height:1}
+.ai-fab{position:fixed;bottom:28px;left:28px;width:54px;height:54px;border-radius:50%;background:var(--blue);color:#fff;border:none;cursor:pointer;font-size:26px;box-shadow:0 4px 18px rgba(59,130,246,.45);z-index:1100;display:flex;align-items:center;justify-content:center;transition:transform .2s,box-shadow .2s;line-height:1}
 .ai-fab:hover{transform:scale(1.1);box-shadow:0 6px 22px rgba(59,130,246,.55)}
 .ai-fab.open{background:#1d4ed8}
-.ai-popup{position:fixed;bottom:94px;right:28px;width:360px;max-height:540px;background:var(--card);border-radius:16px;box-shadow:0 8px 36px rgba(0,0,0,.18);z-index:1099;display:none;flex-direction:column;overflow:hidden;border:1px solid var(--border)}
+.ai-popup{position:fixed;bottom:94px;left:28px;width:360px;max-height:540px;background:var(--card);border-radius:16px;box-shadow:0 8px 36px rgba(0,0,0,.18);z-index:1099;display:none;flex-direction:column;overflow:hidden;border:1px solid var(--border)}
 .ai-popup.open{display:flex}
 .ai-popup-header{background:var(--blue);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px;gap:8px}
 .ai-popup-header span{flex:1}
@@ -169,7 +169,8 @@ tr:last-child td{border:none}
   <div class="kpi-card">
     <div class="kpi-label" id="kpi-label-ads">广告投放</div>
     <div class="kpi-value orange" id="k-ads">—</div>
-    <div class="kpi-sub" id="k-ads-sub">最新月份广告 ROI</div>
+    <div class="kpi-sub" id="k-ads-sub">所有月份合计</div>
+    <div class="kpi-sub" id="k-ads-month" style="margin-top:2px;font-size:11px;color:#9ca3af">当月 —</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label" id="kpi-label-burn">日均烧钱</div>
@@ -249,14 +250,27 @@ tr:last-child td{border:none}
     <button class="ai-popup-close" onclick="aiTogglePopup()" title="关闭">✕</button>
   </div>
   <div class="ai-popup-body">
-    <!-- Chat interface (server-side proxy, no key needed) -->
-    <div id="ai-chat">
+    <!-- Setup panel -->
+    <div id="ai-setup">
+      <div class="ai-setup-box">
+        <p id="ai-setup-desc">使用 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek API Key</a> 驱动 AI 问答（国内可直接访问）。<br>
+        获取方式：访问 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com</a> → 注册/登录 → 创建 API Key → 复制粘贴到下方。Key 仅保存在你的浏览器本地，不会上传。</p>
+        <div class="ai-key-row">
+          <input type="password" id="ai-key-input" placeholder="sk-…" />
+          <button class="btn" onclick="aiSaveKey()" id="ai-save-btn">保存</button>
+        </div>
+      </div>
+    </div>
+    <!-- Chat interface -->
+    <div id="ai-chat" style="display:none">
       <div id="ai-messages" class="ai-messages"></div>
       <div class="ai-input-row">
         <input type="text" id="ai-input" placeholder="输入问题，按 Enter 发送…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend()}" />
         <button class="btn" id="ai-send-btn" onclick="aiSend()"><span id="ai-send-icon">➤</span> <span id="ai-send-text">发送</span></button>
       </div>
-      
+      <div class="ai-footer">
+        <button class="ai-reset-btn" onclick="aiResetKey()" id="ai-reset-btn">重新设置 API Key</button>
+      </div>
     </div>
   </div>
 </div>
@@ -585,6 +599,7 @@ function renderKPIs() {
   const t = l();
   const totExp = monthlyData.reduce((s, m) => s + m.summary.total, 0);
   const totRev = monthlyData.reduce((s, m) => s + m.summary.revUSD, 0);
+  const totAds = monthlyData.reduce((s, m) => s + m.summary.ads, 0);
   const net = totRev - totExp;
   const latest = monthlyData[monthlyData.length - 1].summary;
   const roi = latest.ads > 0 ? (latest.revUSD / latest.ads * 100).toFixed(1) : null;
@@ -601,8 +616,9 @@ function renderKPIs() {
   set('k-exp', usd(totExp));
   set('k-rev', usd(totRev));
   set('k-net', usd(net));
-  set('k-ads', usd(latest.ads));
-  document.getElementById('k-ads-sub').textContent = roi ? t.roiSub(roi) : t.roiNoData;
+  set('k-ads', usd(totAds));
+  document.getElementById('k-ads-sub').textContent = currentLang === 'zh' ? '所有月份合计' : 'All months total';
+  document.getElementById('k-ads-month').textContent = (currentLang === 'zh' ? '当月 ' : 'Current month ') + usd(latest.ads);
   set('k-burn', usd(burn) + t.burnSuffix);
   set('k-hr', hrPct + '%');
 
@@ -821,6 +837,8 @@ async function loadAll() {
 }
 
 // ── AI Q&A ───────────────────────────────────────────────────────────────────
+const AI_KEY_LS = 'yunio_deepseek_key';
+
 function aiTogglePopup() {
   const popup = document.getElementById('ai-popup');
   const fab   = document.getElementById('ai-fab');
@@ -833,10 +851,39 @@ function aiTogglePopup() {
 }
 
 function aiInit() {
+  const key = localStorage.getItem(AI_KEY_LS);
+  if (key) {
+    document.getElementById('ai-setup').style.display = 'none';
+    document.getElementById('ai-chat').style.display = 'block';
+    aiAddMsg('bot', currentLang === 'zh'
+      ? '你好！我是财务助手 🤖\n数据加载完成后，你可以问我任何财务问题，比如：\n• 5月支出最多的是哪个类别？\n• 累计亏损了多少？\n• 广告投放 ROI 怎么样？'
+      : 'Hi! I\'m your Finance AI 🤖\nOnce data loads, ask me anything — e.g.:\n• Which category had the highest spend in May?\n• What\'s the cumulative net loss?\n• How\'s our ad ROI?');
+    aiRenderSuggestions();
+  }
+}
+
+function aiSaveKey() {
+  const key = document.getElementById('ai-key-input').value.trim();
+  if (!key.startsWith('sk-') || key.length < 20) {
+    alert(currentLang === 'zh' ? 'API Key 格式有误，请检查后重试' : 'Invalid API key format, please check again');
+    return;
+  }
+  localStorage.setItem(AI_KEY_LS, key);
+  document.getElementById('ai-setup').style.display = 'none';
+  document.getElementById('ai-chat').style.display = 'block';
   aiAddMsg('bot', currentLang === 'zh'
-    ? '你好！我是财务助手 🤖\n数据加载完成后，你可以问我任何财务问题，比如：\n• 5月支出最多的是哪个类别？\n• 累计亏损了多少？\n• 广告投放 ROI 怎么样？'
-    : 'Hi! I\'m your Finance AI 🤖\nOnce data loads, ask me anything — e.g.:\n• Which category had the highest spend in May?\n• What\'s the cumulative net loss?\n• How\'s our ad ROI?');
+    ? '✅ API Key 已保存！\n数据加载完成后即可开始提问。'
+    : '✅ API Key saved!\nYou can start asking questions once data loads.');
   aiRenderSuggestions();
+}
+
+function aiResetKey() {
+  if (!confirm(currentLang === 'zh' ? '确认清除已保存的 API Key？' : 'Clear the saved API Key?')) return;
+  localStorage.removeItem(AI_KEY_LS);
+  document.getElementById('ai-setup').style.display = 'block';
+  document.getElementById('ai-chat').style.display = 'none';
+  document.getElementById('ai-key-input').value = '';
+  document.getElementById('ai-messages').innerHTML = '';
 }
 
 function aiAddMsg(role, text) {
@@ -895,6 +942,8 @@ function aiBuildContext() {
 }
 
 async function aiSend() {
+  const key = (localStorage.getItem(AI_KEY_LS) || '').trim();
+  if (!key) return;
   const input = document.getElementById('ai-input');
   const q = input.value.trim();
   if (!q) return;
@@ -927,10 +976,10 @@ async function aiSend() {
       : `You are Yunio's financial assistant. Answer questions based solely on the data below. Be concise and accurate. If the question is outside the data scope, politely say so.\n\n${context}`;
 
     const resp = await fetch(
-      'https://yunio-deepseek-proxy.vercel.app/api/proxy',
+      'https://api.deepseek.com/chat/completions',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages: [
@@ -962,12 +1011,12 @@ async function aiSend() {
 
     if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError') || rawMsg.includes('fetch')) {
       errText = isZh
-        ? '网络请求失败，请稍后重试或检查网络连接。'
-        : 'Network error. Please check your connection and try again.';
+        ? '网络请求失败（Failed to fetch）。\n可能原因：当前网络无法访问 api.deepseek.com，或浏览器拦截了跨域请求。\n建议：刷新页面后重试，或检查网络连接。'
+        : 'Network error (Failed to fetch). The browser could not reach api.deepseek.com. Check your network and try again.';
     } else if (rawMsg.includes('Insufficient Balance') || rawMsg.includes('insufficient') || rawMsg.includes('quota') || rawMsg.includes('402')) {
       errText = isZh
-        ? '服务暂时不可用，请稍后重试。'
-        : 'Service temporarily unavailable, please try again later.';
+        ? '余额不足，请前往 platform.deepseek.com 充值。'
+        : 'Insufficient balance — please top up at platform.deepseek.com.';
     } else if (rawMsg.includes('401') || rawMsg.includes('Unauthorized') || rawMsg.includes('Invalid API') || rawMsg.includes('Authentication')) {
       errText = isZh
         ? 'API Key 验证失败（401）。\n请点击"重新设置 API Key"，确认密钥完整无误后重新保存。'
