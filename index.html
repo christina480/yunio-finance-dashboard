@@ -802,7 +802,7 @@ async function loadAll() {
       // fall back to overview only when sheet parsing fails.
       let summary = rows ? parseSummary(rows, name) : null;
       if (!summary) summary = overviewSummaries[name] || null;
-      if (summary && summary.total > 50000) summary = null; // guard: INR-scale overflow
+      if (summary && summary.total > 500000) summary = null; // guard: INR-scale overflow (real monthly totals can exceed $50k)
       // Sheet exists but no parseable summary yet (in-progress month, e.g. 6月 all zeros)
       if (!summary && rows && rows.length > 2) summary = { name, proj:0, ads:0, hr:0, revUSD:0, total:0, net:0 };
       if (!summary) return null;
