@@ -510,6 +510,24 @@ function parseSummary(rows, name) {
       return { name, proj, ads, hr, revUSD, total, net };
     }
   }
+  // --- Approach 4: Text-labeled format (col A = label, col B = value) ---
+  // Matches 5月/6月-style sheets: "本月支出(USD)" / "$69,320.96" in cols A/B.
+  const findL = kw => rows.find(r => r[0] != null && String(r[0]).includes(kw));
+  const expLR = findL('本月支出');
+  const revLR = findL('本月收入');
+  const netLR = findL('净盈余');
+  if (expLR) {
+    const total  = Math.abs(num(expLR[1]));
+    const revUSD = revLR ? Math.abs(num(revLR[1])) : 0;
+    const net    = netLR ? num(netLR[1]) : revUSD - total;
+    const projR  = findL('项目支出小计');
+    const adsR   = findL('投放支出小计');
+    const hrR    = findL('人员支出小计');
+    const proj   = projR ? Math.abs(num(projR[1])) : 0;
+    const ads    = adsR  ? Math.abs(num(adsR[1]))  : 0;
+    const hr     = hrR   ? Math.abs(num(hrR[1]))   : 0;
+    if (total > 0 || Math.abs(net) > 0) return { name, proj, ads, hr, revUSD, total, net };
+  }
   return null;
 }
 
