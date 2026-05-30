@@ -636,15 +636,22 @@ function renderMonthlyCards() {
   header.style.display = 'block';
   header.textContent = t.monthlySectionHeader;
 
-  // Sort newest month first (reverse chronological)
-  const sorted = [...monthlyData].reverse();
-  const latestName = sorted.length > 0 ? sorted[0].summary.name : null;
+  // Sort: current calendar month first, then newest-first
+  const currentMonthNum = new Date().getMonth() + 1;
+  const currentMonthName = currentMonthNum + '月';
+  const sorted = [...monthlyData].sort((a, b) => {
+    const aNum = parseInt(a.summary.name);
+    const bNum = parseInt(b.summary.name);
+    if (aNum === currentMonthNum) return -1;
+    if (bNum === currentMonthNum) return 1;
+    return bNum - aNum;
+  });
 
   grid.innerHTML = sorted.map(({ summary: s }, idx) => {
     const net = s.revUSD - s.total;
     const netColor = net >= 0 ? '#059669' : '#dc2626';
     const netBadgeClass = net >= 0 ? 'bg-green' : 'bg-red';
-    const isCurrent = idx === 0;
+    const isCurrent = s.name === currentMonthName;
     const currentLabel = currentLang === 'zh' ? '当月' : 'Current';
 
     function row(label, value, color, prog) {
@@ -811,7 +818,8 @@ async function loadAll() {
       return { name, summary, txns };
     }));
 
-    monthlyData = results.filter(Boolean);
+    // Exclude months with no real data (all-zero placeholder months, e.g. future months)
+    monthlyData = results.filter(r => r && (r.summary.total > 0 || Math.abs(r.summary.net) > 0 || r.summary.revUSD > 0));
     allTxns = monthlyData.flatMap(m => m.txns);
 
     if (monthlyData.length === 0) throw new Error('No sheet data found');
