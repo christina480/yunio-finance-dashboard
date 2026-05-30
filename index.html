@@ -278,9 +278,8 @@ tr:last-child td{border:none}
 <script>
 const SID = '1HKvW-0EbJDzXVPzvk-LiKyk7JLzeBklhPegPIZJYI8A';
 const INR_RATE = 93.25;
-// Monthly data sheets (exclude overview sheet '6月')
-const ALL_MONTHS = ['3月','4月','5月','7月','8月','9月','10月','11月','12月'];
-// '6月' is the 财报总览 overview sheet (authoritative summaries), not a monthly data sheet
+// Monthly data sheets — 6月 added 2026-05-26; overview is '财报总览' tab
+const ALL_MONTHS = ['3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
 
 let monthlyData = []; // [{ name, summary, txns }]
 let allTxns = [];
@@ -530,8 +529,8 @@ function computeINRRevUSD(rows) {
 }
 
 async function loadOverviewSummaries() {
-  // Overview tab was renamed from '6月' to '财报总览'; try both
-  const rows = (await safeSheet('财报总览')) || (await safeSheet('6月'));
+  // Overview tab is '财报总览'; '6月' is now a monthly data sheet, not the overview
+  const rows = await safeSheet('财报总览');
   if (!rows) return {};
   const summaries = {};
   let currentMonth = null;
@@ -805,8 +804,7 @@ async function loadAll() {
       if (!summary) summary = overviewSummaries[name] || null;
       if (summary && summary.total > 50000) summary = null; // guard: INR-scale overflow
       if (!summary) return null;
-      // Skip months with no data at all
-      if (summary.total === 0 && summary.revUSD === 0 && summary.net === 0) return null;
+      // Zero-value months (e.g., month in progress) are intentionally rendered
       const txns = rows ? parseTxns(rows, name) : [];
       return { name, summary, txns };
     }));
@@ -856,7 +854,7 @@ function aiInit() {
     document.getElementById('ai-setup').style.display = 'none';
     document.getElementById('ai-chat').style.display = 'block';
     aiAddMsg('bot', currentLang === 'zh'
-      ? '你好！我是财务助手 🤖\n数据加载完成后，你可以问我任何财务问题，比如：\n• 5月支出最多的是哪个类别？\n• 累计亏损了多少？\n• 广告投放 ROI 怎么样？'
+      ? '你好！我是财务助手 🤖\n数据加载完成后，你可以问我任何财务问题，比如：\n• 6月支出最多的是哪个类别？\n• 累计亏损了多少？\n• 广告投放 ROI 怎么样？'
       : 'Hi! I\'m your Finance AI 🤖\nOnce data loads, ask me anything — e.g.:\n• Which category had the highest spend in May?\n• What\'s the cumulative net loss?\n• How\'s our ad ROI?');
     aiRenderSuggestions();
   }
