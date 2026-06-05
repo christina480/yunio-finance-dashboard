@@ -470,7 +470,8 @@ function parseSummary(rows, name) {
   }
   // --- Approach 2: Simplified format (5月-style) ---
   const nullARows = rows.filter(r => r[0] === null || r[0] === undefined);
-  const bValRows = nullARows.filter(r => r[1] !== null && r[1] !== undefined && r[1] !== '');
+  // Only keep rows where B is a monetary/numeric value (not a category-name string like '项目支出')
+  const bValRows = nullARows.filter(r => { const b = r[1]; if (b === null || b === undefined || b === '') return false; if (typeof b === 'number') return true; if (typeof b === 'string') return /^[-$\d]/.test(b.trim()); return false; });
   if (bValRows.length >= 3) {
     const revUSD = Math.abs(num(bValRows[bValRows.length-3][1]));
     const total  = Math.abs(num(bValRows[bValRows.length-2][1]));
