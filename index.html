@@ -476,7 +476,7 @@ function parseSummary(rows, name) {
     const total  = Math.abs(num(bValRows[bValRows.length-2][1]));
     const net    = num(bValRows[bValRows.length-1][1]);
     if (total > 0 || Math.abs(net) > 0) {
-      const costBRows = bValRows.slice(0, -3).filter(r => num(r[1]) > 0);
+      const costBRows = bValRows.slice(0, -3); // preserve zero-value categories (e.g. 项目支出=$0 in 6月)
       const costDRows = nullARows.filter(r =>
         (r[1] === null || r[1] === undefined || r[1] === '') &&
         r[3] !== null && r[3] !== undefined && r[3] !== '' && num(r[3]) !== 0);
